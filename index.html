@@ -10,12 +10,12 @@
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%231e3a8a"/><text x="32" y="42" font-family="system-ui" font-size="22" font-weight="800" fill="%23fff" text-anchor="middle">SES</text></svg>'>
 <style>
 :root{
-  --bg:#0b1220;--bg2:#0f172a;--card:#111a2e;--card2:#162038;--line:#22304e;
-  --text:#e6edf7;--muted:#8a98b3;--mutedDim:#5e6a85;
-  --accent:#7cc5ff;--accent2:#9b8cff;--brand:#1e3a8a;
-  --basic:#f59e0b;--solid:#10b981;--excel:#a78bfa;
-  --ok:#10b981;--warn:#f59e0b;--err:#ef4444;
-  --r:14px;--shadow:0 10px 30px rgba(0,0,0,.35);
+  --bg:#0a1024;--bg2:#0d1530;--card:#141d3a;--card2:#1c2748;--line:#2a3559;
+  --text:#ecf1fb;--muted:#9ba8c4;--mutedDim:#5e6a85;
+  --accent:#7cc5ff;--accent2:#b794ff;--warm:#f6c890;--rose:#fda4af;--brand:#1e3a8a;
+  --basic:#f59e0b;--solid:#34d399;--excel:#c4b5fd;
+  --ok:#34d399;--warn:#fbbf24;--err:#f87171;
+  --r:16px;--shadow:0 10px 30px rgba(0,0,0,.35);--shadowWarm:0 14px 40px rgba(246,200,144,.10);
   --fz:15px;
 }
 [data-theme="light"]{
@@ -293,6 +293,97 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   background:rgba(124,197,255,.1);color:var(--accent);border:1px solid rgba(124,197,255,.2);
   margin-right:5px}
 
+/* === Mot de papa : carte chaleureuse === */
+.papaCard{
+  position:relative;overflow:hidden;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(246,200,144,.18), transparent 60%),
+    radial-gradient(circle at 100% 100%, rgba(253,164,175,.16), transparent 55%),
+    linear-gradient(180deg, #1a2147, #15193a);
+  border:1px solid rgba(246,200,144,.30);
+  border-radius:18px;padding:18px 18px 16px;
+  box-shadow:var(--shadowWarm);
+  margin-bottom:14px;
+  animation:fadeUp .55s ease-out
+}
+.papaCard::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(800px 200px at 50% -50%, rgba(246,200,144,.10), transparent 70%);
+}
+.papaCard .lbl{
+  font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;
+  color:var(--warm);font-weight:700;display:flex;align-items:center;gap:6px;
+}
+.papaCard .lbl .heart{
+  display:inline-block;color:var(--rose);animation:beat 1.6s ease-in-out infinite
+}
+@keyframes beat{
+  0%,100%{transform:scale(1)}
+  18%{transform:scale(1.18)}
+  36%{transform:scale(1)}
+  54%{transform:scale(1.10)}
+  72%{transform:scale(1)}
+}
+.papaCard .msg{
+  font-family:Georgia,"Iowan Old Style","Apple Garamond",serif;
+  font-style:italic;font-size:16px;line-height:1.55;
+  margin:10px 0 8px;color:#fff5e1
+}
+.papaCard .sig{
+  font-size:13px;color:var(--warm);text-align:right;font-weight:600
+}
+.papaCard .pNext{
+  position:absolute;top:12px;right:12px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(246,200,144,.25);color:var(--warm);
+  width:30px;height:30px;border-radius:50%;font-size:14px;line-height:1
+}
+.papaCard .pNext:hover{background:rgba(255,255,255,.10)}
+
+/* Hero accueil */
+.heroHi{
+  font-size:22px;font-weight:800;letter-spacing:-.4px;line-height:1.2;margin:0
+}
+.heroSub{color:var(--muted);font-size:13.5px;margin:4px 0 0}
+
+/* Animations globales */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{0%{transform:scale(.94);opacity:.6}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+section[data-route].active > *{animation:fadeUp .45s ease-out backwards}
+section[data-route].active > *:nth-child(2){animation-delay:.05s}
+section[data-route].active > *:nth-child(3){animation-delay:.10s}
+section[data-route].active > *:nth-child(4){animation-delay:.15s}
+
+.btn.primary{box-shadow:0 8px 24px rgba(155,140,255,.25)}
+.btn.primary:active{transform:scale(.98)}
+.card{transition:border-color .2s,transform .2s}
+.chapCard:active{transform:scale(.985)}
+
+/* Compteur de fierté */
+.proudPill{
+  display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(246,200,144,.18),rgba(253,164,175,.18));
+  border:1px solid rgba(246,200,144,.35);color:#fff5e1;
+  padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600
+}
+
+/* Mode Pause respiration */
+.breathStage{
+  min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:40px 20px;gap:20px
+}
+.breathBall{
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle, rgba(124,197,255,.55), rgba(183,148,255,.20) 65%, transparent 75%);
+  display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px;
+  transition:transform 5s cubic-bezier(.4,0,.4,1);
+  box-shadow:0 0 80px rgba(124,197,255,.25)
+}
+.breathBall.in{transform:scale(1.4)}
+.breathBall.hold{transform:scale(1.4)}
+.breathBall.out{transform:scale(.7)}
+
+/* Toast plus chaleureux */
+.toast{font-weight:500}
+
 /* search */
 .searchBox{
   display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
@@ -332,6 +423,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <button class="navItem" data-go="calc"><span class="ico">🧮</span>Calcul mental EC2</button>
     <button class="navItem" data-go="oral"><span class="ico">🎤</span>Grand Oral (coef 10)</button>
     <button class="navItem" data-go="verbes"><span class="ico">📖</span>Verbes de consigne</button>
+    <h2>Souffle</h2>
+    <button class="navItem" data-go="zen"><span class="ico">🌬️</span>Pause respiration</button>
+    <button class="navItem" data-go="papa"><span class="ico">💛</span>Mot de papa</button>
     <h2>Outils</h2>
     <button class="navItem" data-go="planning"><span class="ico">🗓️</span>Planning</button>
     <button class="navItem" data-go="stats"><span class="ico">📈</span>Statistiques</button>
@@ -345,10 +439,9 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
   <!-- HOME -->
   <section data-route="home" class="active">
     <div class="card">
-      <div class="row" style="justify-content:space-between">
+      <div class="row" style="justify-content:space-between;align-items:center">
         <div>
-          <h3 style="margin:0">Salut 👋</h3>
-          <p class="muted" style="margin:4px 0 0">Prêt à exceller au Bac SES 2026.</p>
+          <span class="proudPill" id="proudPill">💛 0 sessions complétées</span>
         </div>
         <div class="streak" id="homeStreak">0<small> jour</small></div>
       </div>
@@ -357,20 +450,19 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     </div>
 
     <div class="card">
-      <h3>📌 À faire aujourd'hui</h3>
+      <h3>📌 Aujourd'hui — pas plus, pas moins</h3>
       <div id="homeTodo"></div>
     </div>
 
     <div class="grid">
-      <button class="btn primary lg" data-go="cards">🎴 Réviser mes cartes dues</button>
-      <button class="btn lg" data-go="programme">📚 Voir le programme</button>
-      <button class="btn lg" data-go="methodo&t=ec1">📝 Méthodo EC1</button>
+      <button class="btn primary lg" data-go="cards">🎴 Mes cartes du jour</button>
+      <button class="btn lg" data-go="zen">🌬️ Pause respiration (3 min)</button>
+      <button class="btn lg" data-go="programme">📚 Programme</button>
       <button class="btn lg" data-go="exam">⏱️ Examen blanc 4 h</button>
     </div>
 
-    <div class="card mt2">
-      <h3>🔬 Pourquoi ces fonctionnalités ?</h3>
-      <p class="muted" style="font-size:13px">Les flashcards SM-2 + l'interleaving (mélanger les chapitres) sont les seules techniques classées « efficacité haute » par Dunlosky 2013 et Hattie & Donoghue 2021. Tester sa mémoire (active recall) bat la relecture passive de ~50 % en rétention à 1 semaine (Roediger & Karpicke 2006).</p>
+    <div class="card mt2" style="background:rgba(124,197,255,.05);border-color:rgba(124,197,255,.18)">
+      <p class="muted" style="font-size:13px;margin:0">💡 <b>Le secret</b> : flashcards courtes + interleaving + sommeil. Tester sa mémoire (active recall) bat la relecture passive de <b>~50 %</b> en rétention à 1 semaine (Roediger & Karpicke 2006). Tu n'as pas besoin de plus.</p>
     </div>
   </section>
 
@@ -459,6 +551,18 @@ hr{border:0;border-top:1px solid var(--line);margin:14px 0}
     <div id="annalesBody"></div>
   </section>
 
+  <!-- ZEN respiration -->
+  <section data-route="zen">
+    <h2 style="margin:0 0 10px;font-size:18px">🌬️ Pause respiration</h2>
+    <div id="zenBody"></div>
+  </section>
+
+  <!-- PAPA messages -->
+  <section data-route="papa">
+    <h2 style="margin:0 0 10px;font-size:18px">💛 Mot de papa</h2>
+    <div id="papaBody"></div>
+  </section>
+
   <!-- CALC mental -->
   <section data-route="calc">
     <h2 style="margin:0 0 10px;font-size:18px">🧮 Calcul mental EC2</h2>
@@ -501,7 +605,12 @@ const defaultPrefs = {
   star:{}, done:{},
   level:{}, // par chapitre, niveau ouvert
   cardChap:"all", onlyDue:true,
-  streak:0, lastReviewDay:null
+  streak:0, lastReviewDay:null,
+  prenom:"", // pour personnaliser
+  papaMessages:[], // messages custom de Guillaume
+  papaIndex:0,
+  papaSeen:[],
+  proud:0 // compteur sessions complétées
 };
 let prefs = loadPrefs();
 
@@ -1996,8 +2105,45 @@ const routes = {
   cards:renderCards, quiz:renderQuiz, methodo:renderMethodo,
   exam:renderExam, planning:renderPlanning, stats:renderStats,
   annales:renderAnnales, settings:renderSettings,
-  calc:renderCalc, oral:renderOral, verbes:renderVerbes
+  calc:renderCalc, oral:renderOral, verbes:renderVerbes,
+  zen:renderZen, papa:renderPapa
 };
+
+/* ============================================================
+   MOTS DE PAPA — Guillaume → son fils.
+   Tonalité : honnête, pas mièvre. Modifiable dans Paramètres.
+   ============================================================ */
+const MOTS_DE_PAPA = [
+  "T'es plus solide que tu ne crois. Une carte de plus, vas-y.",
+  "Je suis fier de toi parce que tu bosses. La note vient après.",
+  "Le 16 juin est un jour parmi d'autres. Ce que tu construis dépasse ce jour-là.",
+  "Les bonnes notes se décident en mai, pas en juin. T'es au bon endroit, au bon moment.",
+  "On a confiance. Vraiment. T'as rien à prouver à personne — juste à toi.",
+  "Quand tu rates une carte, c'est que tu apprends. C'est exactement le but.",
+  "Si t'as 10 minutes, fais 5 cartes. Si t'as 5 minutes, fais 1 carte. Si t'as 1 minute, respire.",
+  "Ce qui compte, c'est ta régularité. Pas la perfection. Surtout pas la perfection.",
+  "Souviens-toi : tu as déjà passé les concours de la vie réelle, plein. Le bac, c'est rien à côté.",
+  "Tu peux fermer cette appli quand tu veux. Personne ne te force. Tu reviens parce que tu choisis.",
+  "Ralentis. Mange bien. Dors. Ton cerveau fait 80 % du boulot pendant que tu dors.",
+  "Si t'as la pression : 5 secondes inspire, 5 secondes expire. Trois fois. Et on repart.",
+  "Quoi qu'il arrive le 16 juin, je t'aime pareil. C'est ça la base. Le reste c'est du bonus.",
+  "Quand tu doutes, regarde tout le chemin déjà fait — pas celui qui reste.",
+  "Le truc avec le bac : ce n'est pas un sommet, c'est un palier. Y a tellement de belles choses après."
+];
+function getMotsPapa(){
+  const custom = (prefs.papaMessages || []).filter(s => s && s.trim());
+  return custom.length ? custom : MOTS_DE_PAPA;
+}
+function pickMotPapa(){
+  const list = getMotsPapa();
+  let i = (prefs.papaIndex || 0) % list.length;
+  prefs.papaIndex = (i + 1) % list.length;
+  savePrefs();
+  return list[i];
+}
+function nomFiston(){
+  return prefs.prenom && prefs.prenom.trim() ? prefs.prenom.trim() : "champion";
+}
 function parseHash(){
   const h = location.hash.replace(/^#\//,"") || "home";
   const [name, ...rest] = h.split("&");
@@ -2044,14 +2190,40 @@ async function renderHome(){
   const due = all.filter(c => (c.sm2?.dueDate||0) <= now).length;
   const learned = all.filter(c => (c.sm2?.interval||0) >= 21).length;
   const total = all.length;
+  // Salutation selon l'heure
+  const h = new Date().getHours();
+  const salut = h < 6 ? "Tu te lèves tôt 💪" : h < 12 ? "Bonjour" : h < 17 ? "Bon aprem" : h < 22 ? "Bonsoir" : "T'es encore là ? 🌙";
+  const target = new Date(prefs.examDate + "T08:00:00").getTime();
+  const days = Math.max(0, Math.ceil((target - Date.now())/86400000));
+  document.querySelector(".heroHi") && document.querySelector(".heroHi").remove();
+  document.querySelector(".heroSub") && document.querySelector(".heroSub").remove();
   const stats = document.getElementById("homeStats");
+  // Insère le hero (salut perso) AVANT la stats card si pas déjà là
+  const homeSection = document.querySelector('section[data-route="home"]');
+  let papaCard = document.getElementById("papaCardHome");
+  if(!papaCard){
+    papaCard = document.createElement("div");
+    papaCard.className = "papaCard";
+    papaCard.id = "papaCardHome";
+    homeSection.insertBefore(papaCard, homeSection.firstElementChild);
+  }
+  const mot = pickMotPapa();
+  papaCard.innerHTML = `
+    <button class="pNext" aria-label="Autre mot" id="papaNext">↻</button>
+    <div class="lbl"><span class="heart">❤</span> ${escapeHTML(salut)} ${escapeHTML(nomFiston())}</div>
+    <div class="msg">« ${escapeHTML(mot)} »</div>
+    <div class="sig">— Papa</div>`;
+  document.getElementById("papaNext").onclick = (e) => { e.stopPropagation(); renderHome(); };
   stats.innerHTML = `
-    <div><div style="font-size:22px;font-weight:800">${due}</div><div class="muted" style="font-size:11px">cartes dues</div></div>
-    <div><div style="font-size:22px;font-weight:800">${learned}</div><div class="muted" style="font-size:11px">maîtrisées</div></div>
-    <div><div style="font-size:22px;font-weight:800">${total}</div><div class="muted" style="font-size:11px">total cartes</div></div>
-    <div><div style="font-size:22px;font-weight:800">${Object.values(prefs.done).filter(Boolean).length}/12</div><div class="muted" style="font-size:11px">chapitres vus</div></div>`;
-  document.getElementById("homeStreak").innerHTML = `${prefs.streak||0}<small> jour${(prefs.streak||0)>1?"s":""} de série</small>`;
+    <div><div style="font-size:22px;font-weight:800">${due}</div><div class="muted" style="font-size:11px">à revoir</div></div>
+    <div><div style="font-size:22px;font-weight:800;color:var(--solid)">${learned}</div><div class="muted" style="font-size:11px">acquises ✓</div></div>
+    <div><div style="font-size:22px;font-weight:800">${total}</div><div class="muted" style="font-size:11px">total</div></div>
+    <div><div style="font-size:22px;font-weight:800">${Object.values(prefs.done).filter(Boolean).length}/12</div><div class="muted" style="font-size:11px">chapitres lus</div></div>`;
+  const streakWord = (prefs.streak||0) >= 7 ? " 🔥" : (prefs.streak||0) >= 3 ? " ✨" : "";
+  document.getElementById("homeStreak").innerHTML = `${prefs.streak||0}${streakWord}<small> jour${(prefs.streak||0)>1?"s":""} d'affilée</small>`;
 
+  const proudEl = document.getElementById("proudPill");
+  if(proudEl) proudEl.innerHTML = `💛 ${prefs.proud||0} session${(prefs.proud||0)>1?"s":""} — papa est fier`;
   const todoBox = document.getElementById("homeTodo");
   const items = [];
   // Détection du chapitre le plus faible (parmi évaluables à l'écrit 2026)
@@ -2294,18 +2466,35 @@ async function renderCards(params){
 function showCard(){
   const a = document.getElementById("cardArea");
   if(cardQueue.length === 0){
-    a.innerHTML = `<div class="card empty">
-      <div style="font-size:36px;margin-bottom:8px">🎉</div>
-      <p>Aucune carte à réviser. Bravo !</p>
-      <p class="muted" style="font-size:12.5px">Reviens demain ou désactive « seulement dues » pour réviser plus tôt.</p>
+    a.innerHTML = `<div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> Pour ${escapeHTML(nomFiston())}</div>
+      <div class="msg" style="font-size:15.5px">Plus rien à réviser pour aujourd'hui. T'as fait ce qu'il fallait. Va respirer 10 minutes — ton cerveau consolide pendant que tu vis.</div>
+      <div class="sig">— Papa</div>
+    </div>
+    <div class="row" style="gap:8px;justify-content:center;margin-top:14px">
+      <button class="btn primary" data-go="zen">🌬️ Pause respiration</button>
+      <button class="btn" data-go="home">Retour</button>
     </div>`;
     return;
   }
   if(cardIdx >= cardQueue.length){
-    a.innerHTML = `<div class="card empty">
-      <div style="font-size:36px;margin-bottom:8px">✅</div>
-      <p>Session terminée — ${cardQueue.length} cartes révisées.</p>
-      <button class="btn primary" data-go="home">Retour accueil</button>
+    prefs.proud = (prefs.proud || 0) + 1; savePrefs();
+    const congrats = [
+      `${cardQueue.length} cartes. C'est dans la tête, ${nomFiston()}. ❤`,
+      `Bravo. ${cardQueue.length} cartes consolidées.`,
+      `Session bouclée. Papa est fier — sans algorithme, juste pour de vrai.`,
+      `${cardQueue.length} cartes — c'est exactement comme ça qu'on prépare un 18.`,
+      `Encore une session dans la poche. T'es régulier, c'est ça qui compte.`
+    ][Math.floor(Math.random()*5)];
+    a.innerHTML = `<div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> ${prefs.proud} sessions complétées</div>
+      <div class="msg">${escapeHTML(congrats)}</div>
+      <div class="sig">— Papa</div>
+    </div>
+    <div class="row" style="gap:8px;justify-content:center;margin-top:14px">
+      <button class="btn primary" data-go="zen">🌬️ 3 min de souffle ?</button>
+      <button class="btn" data-go="home">Retour</button>
+      <button class="btn ghost" data-go="cards">Encore</button>
     </div>`;
     bumpStreak();
     return;
@@ -2699,7 +2888,23 @@ function renderAnnales(){
    ============================================================ */
 function renderSettings(){
   const body = document.getElementById("settingsBody");
+  const customMsgs = (prefs.papaMessages || []).join("\n");
   body.innerHTML = `
+    <div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> Pour Guillaume</div>
+      <div class="msg" style="font-size:14.5px">Personnalise les messages que ton fils verra à chaque ouverture. Sois honnête, pas mièvre — c'est ce qui touche.</div>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Le prénom de ton fils</h4>
+      <input type="text" id="setPrenom" class="btn" style="width:100%" placeholder="Ex : Lucas" value="${escapeHTML(prefs.prenom||"")}">
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Affiché en haut de l'accueil et dans les pages tendres.</p>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Mots de papa (1 par ligne, jusqu'à 20)</h4>
+      <textarea id="setPapa" class="copyArea" style="min-height:200px" placeholder="On a confiance en toi.&#10;Le 16 juin est un jour parmi d'autres. Ce que tu construis dépasse ce jour-là.&#10;Quoi qu'il arrive, je t'aime pareil.">${escapeHTML(customMsgs)}</textarea>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Si vide, l'app utilise 15 messages par défaut. Si tu remplis, tes messages remplacent les défauts.</p>
+      <button class="btn primary mt" id="setPapaSave">💛 Enregistrer mes messages</button>
+    </div>
     <div class="card">
       <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Apparence</h4>
       <div class="row"><b>Thème :</b>
@@ -2729,6 +2934,15 @@ function renderSettings(){
       <p style="font-size:13px;margin:6px 0">⚖️ Coef écrit ${PROGRAMME_META.coefficientEcrit} · Coef oral ${PROGRAMME_META.coefficientOral} · Durée ${PROGRAMME_META.dureeEcrit} min.</p>
       <p style="font-size:12.5px;color:var(--muted);margin:8px 0">SM-2 (Wozniak 1990) plutôt que Leitner (moins efficace) ou FSRS (~700 lignes, surdimensionné). localStorage pour prefs, IndexedDB pour cartes/scores. Une seule SPA HTML/CSS/JS, 0 dépendance, 0 build.</p>
     </div>`;
+  const prenomEl = document.getElementById("setPrenom");
+  if(prenomEl) prenomEl.oninput = e => { prefs.prenom = e.target.value; savePrefs(); };
+  const papaSave = document.getElementById("setPapaSave");
+  if(papaSave) papaSave.onclick = () => {
+    const txt = document.getElementById("setPapa").value;
+    const lines = txt.split("\n").map(s => s.trim()).filter(Boolean).slice(0, 20);
+    prefs.papaMessages = lines; prefs.papaIndex = 0; savePrefs();
+    toast(lines.length ? `💛 ${lines.length} message${lines.length>1?"s":""} enregistré${lines.length>1?"s":""}.` : "💛 Messages réinitialisés (défauts).");
+  };
   document.querySelectorAll("[data-th]").forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; savePrefs(); applyTheme(); });
   document.querySelectorAll("[data-fz]").forEach(b => b.onclick = () => { prefs.fz = b.dataset.fz; savePrefs(); applyTheme(); });
   document.getElementById("exportBtn").onclick = exportData;
@@ -2974,6 +3188,91 @@ function renderVerbes(){
       <p style="margin:6px 0 0;font-size:13.5px;color:#fbbf24"><b>⚠️ Piège :</b> ${escapeHTML(v.piege)}</p>
       <p class="muted" style="margin:6px 0 0;font-size:12.5px;font-style:italic">Ex : « ${escapeHTML(v.ex)} »</p>
     </div>`).join("");
+}
+
+/* ============================================================
+   ZEN — Cohérence cardiaque 5-5-5 (inspirer 5 s · garder · expirer 5 s)
+   ============================================================ */
+let zenAnim = null;
+function renderZen(){
+  if(zenAnim){ clearInterval(zenAnim); zenAnim = null; }
+  const body = document.getElementById("zenBody");
+  body.innerHTML = `
+    <div class="card">
+      <p class="muted" style="margin:0;font-size:13.5px">3 minutes pour faire baisser le cortisol. Inspire 5 secondes, expire 5 secondes. Le cœur s'aligne avec ton souffle. Tu peux le faire avant un EC, avant l'oral, avant de dormir.</p>
+    </div>
+    <div class="breathStage">
+      <div class="breathBall out" id="breathBall">Prêt ?</div>
+      <div class="muted" id="breathPhase" style="font-size:13px;height:18px"></div>
+      <div style="font-size:36px;font-weight:800" id="breathTimer">3:00</div>
+      <div class="row" style="gap:8px">
+        <button class="btn primary" id="zStart">Commencer</button>
+        <button class="btn" id="zStop">Arrêter</button>
+      </div>
+    </div>`;
+  let secs = 180, paused = true, phase = 0;
+  const phases = [
+    { ms:5000, cls:"in",  txt:"Inspire profondément 🌬️" },
+    { ms:5000, cls:"out", txt:"Expire doucement 💨" }
+  ];
+  let phaseTimer = null;
+  const tickPhase = () => {
+    const p = phases[phase % phases.length];
+    document.getElementById("breathBall").className = "breathBall " + p.cls;
+    document.getElementById("breathPhase").textContent = p.txt;
+    phase++;
+    phaseTimer = setTimeout(tickPhase, p.ms);
+  };
+  const stop = (msg) => {
+    paused = true;
+    if(zenAnim) clearInterval(zenAnim);
+    if(phaseTimer) clearTimeout(phaseTimer);
+    if(msg) toast(msg);
+    const ball = document.getElementById("breathBall"); if(ball){ ball.className = "breathBall out"; ball.textContent = "🌿"; }
+  };
+  document.getElementById("zStart").onclick = () => {
+    paused = false; tickPhase();
+    if(zenAnim) clearInterval(zenAnim);
+    zenAnim = setInterval(() => {
+      if(paused) return;
+      secs--;
+      const el = document.getElementById("breathTimer"); if(!el){ clearInterval(zenAnim); return; }
+      el.textContent = Math.floor(secs/60) + ":" + (secs%60<10?"0":"") + (secs%60);
+      if(secs <= 0){ stop("Bravo. T'es revenu à toi."); document.getElementById("breathTimer").textContent = "✓"; }
+    }, 1000);
+  };
+  document.getElementById("zStop").onclick = () => stop();
+}
+
+/* ============================================================
+   PAGE MOT DE PAPA — vue dédiée, plusieurs messages
+   ============================================================ */
+function renderPapa(){
+  const body = document.getElementById("papaBody");
+  const list = getMotsPapa();
+  const target = new Date(prefs.examDate + "T08:00:00").getTime();
+  const days = Math.max(0, Math.ceil((target - Date.now())/86400000));
+  let dayMsg;
+  if(days === 0) dayMsg = "C'est aujourd'hui. Souviens-toi : t'as déjà fait le plus dur. Va.";
+  else if(days <= 3) dayMsg = `Plus que ${days} jour${days>1?"s":""}. Sommeil + hydratation > révisions intenses maintenant.`;
+  else if(days <= 14) dayMsg = `${days} jours. La phase d'apprentissage est finie — c'est de la consolidation.`;
+  else if(days <= 30) dayMsg = `${days} jours. Tu fais 1 dissertation cette semaine. Une seule. Mais bien.`;
+  else dayMsg = `${days} jours. Largement le temps. Pas de panique.`;
+  body.innerHTML = `
+    <div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> Pour toi, ${escapeHTML(nomFiston())}</div>
+      <div class="msg" style="font-size:15px">${escapeHTML(dayMsg)}</div>
+      <div class="sig">— Papa</div>
+    </div>` +
+    list.map((m,i) => `<div class="papaCard" style="margin-bottom:10px">
+      <div class="lbl"><span class="heart">❤</span> ${i+1}</div>
+      <div class="msg">« ${escapeHTML(m)} »</div>
+      <div class="sig">— Papa</div>
+    </div>`).join("") +
+    `<div class="card" style="margin-top:14px">
+       <p class="muted" style="margin:0;font-size:13px">📝 Guillaume peut éditer ces messages dans <b>Paramètres → Mots de papa</b>. Ils s'affichent sur l'accueil à chaque ouverture.</p>
+       <button class="btn mt" data-go="settings">Modifier les messages</button>
+     </div>`;
 }
 
 /* ============================================================

@@ -1,0 +1,3010 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1e3a8a">
+<meta name="description" content="App de révision Bac SES Terminale - session 2026. PWA offline, flashcards SM-2, méthodo chronométrée.">
+<title>Bac SES 2026 — Révision PWA</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="%231e3a8a"/><text x="32" y="42" font-family="system-ui" font-size="22" font-weight="800" fill="%23fff" text-anchor="middle">SES</text></svg>'>
+<style>
+:root{
+  --bg:#0b1220;--bg2:#0f172a;--card:#111a2e;--card2:#162038;--line:#22304e;
+  --text:#e6edf7;--muted:#8a98b3;--mutedDim:#5e6a85;
+  --accent:#7cc5ff;--accent2:#9b8cff;--brand:#1e3a8a;
+  --basic:#f59e0b;--solid:#10b981;--excel:#a78bfa;
+  --ok:#10b981;--warn:#f59e0b;--err:#ef4444;
+  --r:14px;--shadow:0 10px 30px rgba(0,0,0,.35);
+  --fz:15px;
+}
+[data-theme="light"]{
+  --bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--line:#e2e8f0;
+  --text:#0f172a;--muted:#475569;--mutedDim:#94a3b8;
+  --accent:#1d4ed8;--accent2:#7c3aed;
+}
+[data-fz="s"]{--fz:13.5px}
+[data-fz="l"]{--fz:16.5px}
+[data-fz="xl"]{--fz:18px}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Inter,system-ui,sans-serif;
+  background:radial-gradient(1200px 800px at 20% -10%,#142042 0%,transparent 60%),
+             radial-gradient(900px 600px at 100% 0%,#1a1a3a 0%,transparent 55%),var(--bg);
+  color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;line-height:1.55;
+  font-size:var(--fz);
+}
+[data-theme="light"] body{background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Top bar */
+.bar{
+  position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:10px;
+  padding:10px 14px;background:rgba(11,18,32,.85);backdrop-filter:saturate(140%) blur(10px);
+  border-bottom:1px solid var(--line)
+}
+[data-theme="light"] .bar{background:rgba(255,255,255,.85)}
+.bar .menuBtn{
+  width:40px;height:40px;border:1px solid var(--line);background:var(--card);
+  border-radius:10px;display:grid;place-items:center;color:var(--text)
+}
+.bar .logo{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b1220;
+  font-weight:800;font-size:11px;letter-spacing:.5px
+}
+.bar .title{flex:1;min-width:0;font-weight:700;font-size:15px;letter-spacing:-.2px}
+.bar .title small{display:block;font-weight:400;color:var(--muted);font-size:11px;margin-top:1px}
+.countdown{
+  border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-size:12px;
+  color:var(--muted);background:var(--card);white-space:nowrap
+}
+.countdown b{color:var(--text)}
+.countdown.warn{border-color:rgba(245,158,11,.5);background:rgba(245,158,11,.1)}
+
+/* Drawer */
+.drawer{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);
+  z-index:40;display:none
+}
+.drawer.open{display:block}
+.drawer-inner{
+  position:absolute;top:0;left:0;bottom:0;width:min(290px,80vw);background:var(--bg2);
+  border-right:1px solid var(--line);overflow-y:auto;padding:14px 10px 30px;
+  animation:slideIn .22s ease
+}
+@keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+.drawer h2{font-size:11px;letter-spacing:1.5px;color:var(--mutedDim);text-transform:uppercase;
+  margin:14px 8px 6px;font-weight:700}
+.navItem{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;
+  color:var(--text);text-decoration:none;border:0;background:transparent;width:100%;
+  text-align:left;font-size:14px
+}
+.navItem:hover{background:var(--card)}
+.navItem.active{background:var(--card2);color:var(--accent);font-weight:600}
+.navItem .ico{width:18px;text-align:center;opacity:.85}
+
+/* Layout */
+.wrap{max-width:980px;margin:0 auto;padding:18px 16px 80px}
+section[data-route]{display:none}
+section[data-route].active{display:block}
+
+/* Cards & lists */
+.card{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px
+}
+.card h3{margin:0 0 8px;font-size:15px;letter-spacing:-.2px}
+.card p{margin:6px 0;color:var(--muted)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grid{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:720px){.grid{grid-template-columns:1fr 1fr}}
+.grid3{display:grid;grid-template-columns:1fr;gap:12px}
+@media(min-width:760px){.grid3{grid-template-columns:repeat(3,1fr)}}
+
+.chip{
+  font-size:11px;padding:3px 9px;border-radius:999px;
+  background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted);
+  white-space:nowrap
+}
+.chip.ok{background:rgba(16,185,129,.14);color:#7ee7c0;border-color:rgba(16,185,129,.3)}
+.chip.warn{background:rgba(245,158,11,.14);color:#fbbf24;border-color:rgba(245,158,11,.3)}
+.chip.info{background:rgba(124,197,255,.12);color:var(--accent);border-color:rgba(124,197,255,.3)}
+.chip.alt{background:rgba(155,140,255,.12);color:var(--accent2);border-color:rgba(155,140,255,.3)}
+.chip.basic{background:rgba(245,158,11,.12);color:#fbbf24;border-color:rgba(245,158,11,.3)}
+.chip.solid{background:rgba(16,185,129,.14);color:#7ee7c0;border-color:rgba(16,185,129,.3)}
+.chip.excel{background:rgba(167,139,250,.14);color:#cbb7ff;border-color:rgba(167,139,250,.3)}
+
+.btn{
+  background:var(--card);border:1px solid var(--line);color:var(--text);
+  padding:10px 14px;border-radius:10px;font-weight:600;font-size:14px;
+  display:inline-flex;align-items:center;gap:8px;justify-content:center;min-height:44px
+}
+.btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#0b1220;border:0}
+.btn.danger{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.4);color:#fca5a5}
+.btn.ghost{background:transparent}
+.btn.lg{padding:14px 18px;font-size:15px}
+.btn.full{width:100%}
+.btn[disabled]{opacity:.5;pointer-events:none}
+
+/* Programme list */
+.pillar{
+  margin:18px 0 6px;font-size:11px;color:var(--muted);
+  text-transform:uppercase;letter-spacing:1.4px;font-weight:700;
+  display:flex;align-items:center;gap:10px
+}
+.pillar::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.pillar.s::before{background:var(--accent2)}
+.pillar.r::before{background:var(--basic)}
+
+.chapCard{
+  background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line);border-radius:var(--r);padding:14px;
+  cursor:pointer;transition:transform .15s,border-color .15s;position:relative;
+  display:block;text-decoration:none;color:var(--text);width:100%;text-align:left
+}
+.chapCard:hover{transform:translateY(-2px);border-color:#2c3a5e}
+.chapCard .num{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;
+  font-weight:600}
+.chapCard h3{margin:6px 0 10px;font-size:14px;line-height:1.4}
+.chapCard .meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.starBtn{
+  position:absolute;top:10px;right:10px;border:0;background:transparent;
+  font-size:18px;color:#374566;padding:4px;line-height:1
+}
+.starBtn.on{color:#fbbf24}
+
+/* Tabs (chapter detail) */
+.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);
+  padding:4px;border-radius:12px;margin-bottom:14px}
+.tabs button{flex:1;background:transparent;border:0;color:var(--muted);
+  padding:9px 8px;border-radius:9px;font-size:13px;font-weight:600}
+.tabs button.active{background:var(--card2);color:var(--text)}
+
+/* Niveau buttons */
+.levels{display:flex;gap:6px;margin-bottom:14px}
+.lvlBtn{
+  flex:1;background:var(--card);border:1px solid var(--line);color:var(--muted);
+  padding:9px 8px;border-radius:10px;font-size:12.5px;font-weight:600;
+  display:flex;flex-direction:column;align-items:center;gap:2px
+}
+.lvlBtn .lbl{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.lvlBtn .note{font-size:14px;color:var(--text)}
+.lvlBtn[data-lvl="0"].active{border-color:var(--basic);background:rgba(245,158,11,.12)}
+.lvlBtn[data-lvl="1"].active{border-color:var(--solid);background:rgba(16,185,129,.12)}
+.lvlBtn[data-lvl="2"].active{border-color:var(--excel);background:rgba(167,139,250,.14)}
+
+/* Synthese content */
+.synth h4{margin:18px 0 8px;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--muted);font-weight:700}
+.synth h4:first-child{margin-top:4px}
+.synth p{margin:8px 0}
+.synth ul{padding-left:18px;margin:6px 0 10px}
+.synth li{margin:4px 0}
+.synth .key{color:var(--text);font-weight:600}
+.synth .quote{
+  border-left:3px solid var(--accent2);padding:6px 12px;margin:10px 0;
+  background:rgba(155,140,255,.06);border-radius:0 8px 8px 0;color:#cbd2e6;font-size:13.5px}
+.synth code{background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;font-size:13px}
+.synth .verif{color:var(--warn);font-size:11px}
+
+/* Flashcard view */
+.flashWrap{
+  min-height:60vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:20px
+}
+.flashCard{
+  width:100%;max-width:560px;background:linear-gradient(180deg,var(--card),var(--card2));
+  border:1px solid var(--line);border-radius:18px;padding:30px 22px;min-height:240px;
+  display:flex;flex-direction:column;justify-content:center;cursor:pointer;
+  font-size:17px;line-height:1.5;user-select:none
+}
+.flashCard.flipped{background:linear-gradient(180deg,#152043,#1a2952)}
+.flashCard .meta{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.4px;
+  margin-bottom:14px}
+.flashCard .text{font-size:18px;line-height:1.55}
+.flashHint{margin-top:14px;color:var(--muted);font-size:12px}
+.qualBar{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;width:100%;max-width:560px;margin-top:18px}
+.qualBtn{
+  border:1px solid var(--line);background:var(--card);color:var(--text);
+  padding:14px 6px;border-radius:10px;font-weight:700;font-size:12px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;min-height:60px
+}
+.qualBtn small{font-weight:400;color:var(--muted);font-size:10px}
+.qualBtn[data-q="0"]{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08)}
+.qualBtn[data-q="2"]{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08)}
+.qualBtn[data-q="4"]{border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.08)}
+.qualBtn[data-q="5"]{border-color:rgba(167,139,250,.4);background:rgba(167,139,250,.08)}
+
+/* Quiz */
+.quizCard{
+  background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);
+  border-radius:14px;padding:20px;margin-bottom:14px
+}
+.quizQ{font-size:16px;margin-bottom:14px;line-height:1.4}
+.quizOpt{
+  display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);
+  color:var(--text);padding:12px 14px;border-radius:10px;margin-bottom:8px;font-size:14px
+}
+.quizOpt:hover{background:var(--card2)}
+.quizOpt.correct{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.5)}
+.quizOpt.wrong{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5)}
+
+/* Methodo / timer */
+.timer{
+  font-variant-numeric:tabular-nums;font-size:28px;font-weight:700;letter-spacing:.5px;
+  font-family:ui-monospace,Menlo,Monaco,monospace
+}
+.timer.warn{color:var(--warn)}
+.timer.danger{color:var(--err);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.5}}
+.copyArea{
+  width:100%;min-height:340px;background:var(--card);border:1px solid var(--line);
+  color:var(--text);border-radius:10px;padding:14px;font-size:14px;line-height:1.6;
+  resize:vertical;font-family:Georgia,"Times New Roman",serif
+}
+.checklist label{display:flex;align-items:flex-start;gap:8px;padding:6px 0;cursor:pointer;font-size:14px}
+.checklist input{margin-top:4px}
+
+/* Stats / heatmap */
+.heatmap{display:flex;flex-wrap:wrap;gap:2px;margin:8px 0;max-width:100%}
+.heatmap rect{stroke:var(--line);stroke-width:.5}
+.streak{font-size:24px;font-weight:800}
+.streak small{font-size:12px;color:var(--muted);font-weight:400}
+.bar-h{height:8px;background:var(--card);border-radius:999px;overflow:hidden;margin:6px 0;
+  border:1px solid var(--line)}
+.bar-h>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--card2);border:1px solid var(--line);padding:10px 16px;
+  border-radius:10px;font-size:13.5px;z-index:60;box-shadow:var(--shadow);
+  animation:fadeUp .25s ease
+}
+@keyframes fadeUp{from{opacity:0;transform:translate(-50%,12px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* Offline banner */
+.offline{
+  background:rgba(245,158,11,.18);border-bottom:1px solid rgba(245,158,11,.4);
+  color:#fbbf24;text-align:center;padding:6px;font-size:12.5px;display:none
+}
+body.offline-mode .offline{display:block}
+
+/* Print */
+@media print{
+  body{background:#fff;color:#000}
+  .bar,.drawer,.tabs,.levels,.btn,.starBtn,.toast,.offline{display:none!important}
+  section[data-route]{display:block!important}
+  .card{break-inside:avoid;border:1px solid #ddd}
+}
+
+/* Empty / utility */
+.empty{text-align:center;color:var(--muted);padding:40px 10px}
+.muted{color:var(--muted)}
+.mt{margin-top:10px}.mt2{margin-top:18px}
+hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+.tagInline{display:inline-block;font-size:11px;padding:2px 7px;border-radius:6px;
+  background:rgba(124,197,255,.1);color:var(--accent);border:1px solid rgba(124,197,255,.2);
+  margin-right:5px}
+
+/* search */
+.searchBox{
+  display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:9px 12px;margin-bottom:12px
+}
+.searchBox input{background:transparent;border:0;outline:0;color:var(--text);width:100%;font-size:14px}
+</style>
+</head>
+<body>
+
+<div class="offline">⚠️ Hors ligne — l'app continue de fonctionner</div>
+
+<header class="bar">
+  <button class="menuBtn" id="menuBtn" aria-label="Menu">☰</button>
+  <div class="logo">SES</div>
+  <div class="title">
+    Bac SES 2026
+    <small id="barSub">Spécialité Terminale · 3 niveaux</small>
+  </div>
+  <div class="countdown" id="countdown">—</div>
+</header>
+
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-inner">
+    <h2>Navigation</h2>
+    <button class="navItem" data-go="home"><span class="ico">🏠</span>Accueil</button>
+    <button class="navItem" data-go="programme"><span class="ico">📚</span>Programme</button>
+    <button class="navItem" data-go="cards"><span class="ico">🎴</span>Flashcards</button>
+    <button class="navItem" data-go="quiz"><span class="ico">❓</span>Quiz QCM</button>
+    <h2>Méthodologie</h2>
+    <button class="navItem" data-go="methodo&t=ec1"><span class="ico">📝</span>EC1 — 4 pts</button>
+    <button class="navItem" data-go="methodo&t=ec2"><span class="ico">📊</span>EC2 — 6 pts</button>
+    <button class="navItem" data-go="methodo&t=ec3"><span class="ico">📋</span>EC3 — 10 pts</button>
+    <button class="navItem" data-go="methodo&t=dis"><span class="ico">🧭</span>Dissertation</button>
+    <button class="navItem" data-go="exam"><span class="ico">⏱️</span>Examen blanc 4 h</button>
+    <h2>Drills express</h2>
+    <button class="navItem" data-go="calc"><span class="ico">🧮</span>Calcul mental EC2</button>
+    <button class="navItem" data-go="oral"><span class="ico">🎤</span>Grand Oral (coef 10)</button>
+    <button class="navItem" data-go="verbes"><span class="ico">📖</span>Verbes de consigne</button>
+    <h2>Outils</h2>
+    <button class="navItem" data-go="planning"><span class="ico">🗓️</span>Planning</button>
+    <button class="navItem" data-go="stats"><span class="ico">📈</span>Statistiques</button>
+    <button class="navItem" data-go="annales"><span class="ico">📜</span>Annales</button>
+    <button class="navItem" data-go="settings"><span class="ico">⚙️</span>Paramètres</button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- HOME -->
+  <section data-route="home" class="active">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h3 style="margin:0">Salut 👋</h3>
+          <p class="muted" style="margin:4px 0 0">Prêt à exceller au Bac SES 2026.</p>
+        </div>
+        <div class="streak" id="homeStreak">0<small> jour</small></div>
+      </div>
+      <hr>
+      <div class="row" id="homeStats" style="gap:14px"></div>
+    </div>
+
+    <div class="card">
+      <h3>📌 À faire aujourd'hui</h3>
+      <div id="homeTodo"></div>
+    </div>
+
+    <div class="grid">
+      <button class="btn primary lg" data-go="cards">🎴 Réviser mes cartes dues</button>
+      <button class="btn lg" data-go="programme">📚 Voir le programme</button>
+      <button class="btn lg" data-go="methodo&t=ec1">📝 Méthodo EC1</button>
+      <button class="btn lg" data-go="exam">⏱️ Examen blanc 4 h</button>
+    </div>
+
+    <div class="card mt2">
+      <h3>🔬 Pourquoi ces fonctionnalités ?</h3>
+      <p class="muted" style="font-size:13px">Les flashcards SM-2 + l'interleaving (mélanger les chapitres) sont les seules techniques classées « efficacité haute » par Dunlosky 2013 et Hattie & Donoghue 2021. Tester sa mémoire (active recall) bat la relecture passive de ~50 % en rétention à 1 semaine (Roediger & Karpicke 2006).</p>
+    </div>
+  </section>
+
+  <!-- PROGRAMME -->
+  <section data-route="programme">
+    <div class="searchBox">
+      <span>🔍</span>
+      <input id="searchProg" placeholder="Rechercher un chapitre, mot-clé, auteur…">
+    </div>
+    <div class="row" style="gap:8px;margin-bottom:8px">
+      <button class="chip info" data-filter="all">Tous</button>
+      <button class="chip" data-filter="ecrit">🎯 Écrit 2026</button>
+      <button class="chip" data-filter="oral">🎤 Oral seulement</button>
+      <button class="chip" data-filter="star">★ Favoris</button>
+    </div>
+    <div id="progList"></div>
+  </section>
+
+  <!-- CHAPITRE detail -->
+  <section data-route="chapitre">
+    <button class="btn ghost" data-go="programme" style="padding:6px 8px">← Programme</button>
+    <h2 id="chTitle" style="margin:6px 0 4px;font-size:18px;line-height:1.3"></h2>
+    <div class="row" id="chMeta" style="margin-bottom:14px"></div>
+    <div class="tabs" id="chTabs">
+      <button data-tab="cours" class="active">Cours</button>
+      <button data-tab="cards">Flashcards</button>
+      <button data-tab="annales">Annales</button>
+    </div>
+    <div id="chBody"></div>
+  </section>
+
+  <!-- CARDS / FLASHCARDS -->
+  <section data-route="cards">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0;font-size:18px">🎴 Flashcards</h2>
+      <button class="btn ghost" id="cardOpts" aria-label="Options">⚙️</button>
+    </div>
+    <div id="cardOptsBox" class="card" style="display:none">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Filtre</h4>
+      <select id="cardChapFilter" class="btn" style="width:100%;margin-bottom:8px">
+        <option value="all">Tous chapitres (interleaving 🔥)</option>
+      </select>
+      <label class="row" style="gap:8px;font-size:14px">
+        <input type="checkbox" id="onlyDue" checked>
+        Seulement les cartes dues
+      </label>
+      <p class="muted" style="font-size:12px;margin-top:8px">L'<b>interleaving</b> (mélange) améliore le transfert d'apprentissage (Rohrer 2022).</p>
+    </div>
+    <div id="cardArea"></div>
+  </section>
+
+  <!-- QUIZ -->
+  <section data-route="quiz">
+    <h2 style="margin:0 0 10px;font-size:18px">❓ Quiz QCM</h2>
+    <div id="quizArea"></div>
+  </section>
+
+  <!-- METHODO -->
+  <section data-route="methodo">
+    <button class="btn ghost" data-go="home" style="padding:6px 8px">← Accueil</button>
+    <h2 id="methTitle" style="margin:6px 0 12px;font-size:18px"></h2>
+    <div id="methBody"></div>
+  </section>
+
+  <!-- EXAM 4h -->
+  <section data-route="exam">
+    <h2 style="margin:0 0 10px;font-size:18px">⏱️ Examen blanc — 4 h</h2>
+    <div id="examBody"></div>
+  </section>
+
+  <!-- PLANNING -->
+  <section data-route="planning">
+    <h2 style="margin:0 0 10px;font-size:18px">🗓️ Planning de révision</h2>
+    <div id="planBody"></div>
+  </section>
+
+  <!-- STATS -->
+  <section data-route="stats">
+    <h2 style="margin:0 0 10px;font-size:18px">📈 Statistiques</h2>
+    <div id="statsBody"></div>
+  </section>
+
+  <!-- ANNALES -->
+  <section data-route="annales">
+    <h2 style="margin:0 0 10px;font-size:18px">📜 Annales 2022 — 2025</h2>
+    <div id="annalesBody"></div>
+  </section>
+
+  <!-- CALC mental -->
+  <section data-route="calc">
+    <h2 style="margin:0 0 10px;font-size:18px">🧮 Calcul mental EC2</h2>
+    <div id="calcBody"></div>
+  </section>
+
+  <!-- ORAL -->
+  <section data-route="oral">
+    <h2 style="margin:0 0 10px;font-size:18px">🎤 Grand Oral (coef 10)</h2>
+    <div id="oralBody"></div>
+  </section>
+
+  <!-- VERBES de consigne -->
+  <section data-route="verbes">
+    <h2 style="margin:0 0 10px;font-size:18px">📖 Verbes de consigne</h2>
+    <div id="verbesBody"></div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section data-route="settings">
+    <h2 style="margin:0 0 10px;font-size:18px">⚙️ Paramètres</h2>
+    <div id="settingsBody"></div>
+  </section>
+
+</main>
+
+<div id="toast" style="display:none"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   STATE — observable via Proxy minimal
+   ============================================================ */
+const PREFS_KEY = "ses2026.prefs";
+const V1_KEY = "bac-ses-state-v1";
+const defaultPrefs = {
+  theme:"dark", fz:"m",
+  examDate:"2026-06-16",
+  dailyMinutes:45,
+  star:{}, done:{},
+  level:{}, // par chapitre, niveau ouvert
+  cardChap:"all", onlyDue:true,
+  streak:0, lastReviewDay:null
+};
+let prefs = loadPrefs();
+
+function loadPrefs(){
+  try{
+    const raw = localStorage.getItem(PREFS_KEY);
+    if(raw) return Object.assign({}, defaultPrefs, JSON.parse(raw));
+  }catch(e){}
+  return Object.assign({}, defaultPrefs);
+}
+function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
+
+function applyTheme(){
+  document.documentElement.dataset.theme = prefs.theme;
+  document.documentElement.dataset.fz = prefs.fz;
+}
+applyTheme();
+
+/* ============================================================
+   IndexedDB minimal wrapper
+   ============================================================ */
+const DB_NAME = "ses2026";
+const DB_VER = 1;
+let _db = null;
+function openDB(){
+  return new Promise((res, rej)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains("cards")) db.createObjectStore("cards",{keyPath:"id"});
+      if(!db.objectStoreNames.contains("scores")) db.createObjectStore("scores",{keyPath:"id",autoIncrement:true});
+      if(!db.objectStoreNames.contains("exams")) db.createObjectStore("exams",{keyPath:"id",autoIncrement:true});
+      if(!db.objectStoreNames.contains("reviews")) db.createObjectStore("reviews",{keyPath:"id",autoIncrement:true});
+    };
+    req.onsuccess = ()=>{ _db = req.result; res(_db); };
+    req.onerror = ()=>rej(req.error);
+  });
+}
+function tx(store, mode="readonly"){
+  return _db.transaction(store, mode).objectStore(store);
+}
+function dbAll(store){
+  return new Promise((res,rej)=>{
+    const r = tx(store).getAll();
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+function dbGet(store, id){
+  return new Promise((res,rej)=>{
+    const r = tx(store).get(id);
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+function dbPut(store, val){
+  return new Promise((res,rej)=>{
+    const r = tx(store,"readwrite").put(val);
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+function dbAdd(store, val){
+  return new Promise((res,rej)=>{
+    const r = tx(store,"readwrite").add(val);
+    r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error);
+  });
+}
+function dbClear(store){
+  return new Promise((res,rej)=>{
+    const r = tx(store,"readwrite").clear();
+    r.onsuccess = ()=>res(); r.onerror = ()=>rej(r.error);
+  });
+}
+
+/* ============================================================
+   SM-2 (SuperMemo 2, P. Wozniak) — qualité 0..5
+   ============================================================ */
+function sm2Init(){
+  return { repetition:0, interval:0, efactor:2.5, dueDate: Date.now() };
+}
+function sm2Review(card, quality){
+  const c = card.sm2 || sm2Init();
+  if(quality < 3){
+    c.repetition = 0;
+    c.interval = 1;
+  } else {
+    if(c.repetition === 0)      c.interval = 1;
+    else if(c.repetition === 1) c.interval = 6;
+    else                        c.interval = Math.round(c.interval * c.efactor);
+    c.repetition += 1;
+  }
+  c.efactor = Math.max(1.3, c.efactor + (0.1 - (5-quality)*(0.08 + (5-quality)*0.02)));
+  // CAP : avant le bac, on plafonne l'intervalle pour qu'aucune carte ne soit oubliée.
+  // J-bac/3 garantit qu'une carte sera revue ≥1 fois avant l'épreuve.
+  const target = new Date(prefs.examDate + "T08:00:00").getTime();
+  const daysLeft = Math.max(1, Math.ceil((target - Date.now())/86400000));
+  const cap = Math.max(1, Math.floor(daysLeft / 3));
+  c.interval = Math.min(c.interval, cap);
+  c.dueDate = Date.now() + c.interval*86400000;
+  card.sm2 = c;
+  card.history = card.history || [];
+  card.history.push({ d: Date.now(), q: quality });
+  return card;
+}
+
+/* ============================================================
+   COMPTE À REBOURS
+   ============================================================ */
+function updateCountdown(){
+  const target = new Date(prefs.examDate + "T08:00:00");
+  const now = new Date();
+  const diff = target - now;
+  const days = Math.ceil(diff / 86400000);
+  const el = document.getElementById("countdown");
+  if(diff <= 0){ el.innerHTML = "Bonne chance ! 🚀"; return; }
+  if(days <= 60){ el.innerHTML = `J-<b>${days}</b>`; el.classList.add("warn"); }
+  else { el.innerHTML = `Bac dans <b>${days} j</b>`; el.classList.remove("warn"); }
+}
+
+/* ============================================================
+   DATA — PROGRAMME (12 chapitres)
+   evaluableEcrit2026 selon BO n°35 du 28/08/2024 (E2, S2, R1 hors écrit)
+   ============================================================ */
+const PROGRAMME_META = {
+  sourceBO: "BO spécial n°8 du 25 juillet 2019 ; note de service BO n°35 du 28 août 2024",
+  session: 2026,
+  coefficientEcrit: 16,
+  coefficientOral: 10,
+  dureeEcrit: 240,
+  dateEcrit: "2026-06-16/17",
+  dateOral: "2026-06-22 → 2026-07-01"
+};
+
+/* CHAPITRES : 12 questionnements officiels.
+   evaluableEcrit2026 = false pour E2 (crises), S2 (école), R1 (justice).
+   Synthèses 3 niveaux : 10/20 (basique), 14/20 (solide), 18/20 (excellence). */
+const CHAPITRES = [
+/* ===================== SCIENCE ÉCONOMIQUE ===================== */
+{
+  code:"E1", domaine:"Science économique",
+  titre:"Quels sont les sources et les défis de la croissance économique ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["croissance","PIB","productivité","Solow","facteurs","progrès technique","innovation","externalités","environnement","Schumpeter","Romer","Aghion"],
+  probaSujet2026:"moyenne",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définition, sources, un exemple, un défi.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Croissance économique</span> : augmentation soutenue du PIB en volume sur longue période.",
+     "<span class='key'>PIB</span> : valeur des biens et services produits dans un pays sur un an.",
+     "<span class='key'>Facteurs de production</span> : travail (L) et capital (K).",
+     "<span class='key'>Productivité du travail</span> = Q/L."]},
+    {h:"Les 2 sources",items:[
+     "<b>Extensive</b> : plus de facteurs (plus de travailleurs, plus de capital).",
+     "<b>Intensive</b> : meilleure utilisation des facteurs grâce au progrès technique → gains de productivité."]},
+    {h:"Un exemple",items:[
+     "Trente Glorieuses (1945-1973) : ~5%/an grâce au progrès technique.",
+     "Chine depuis 1980 : extensif puis intensif."]},
+    {h:"Le défi",items:[
+     "La croissance épuise les ressources et pollue → développement durable.",
+     "Mot-clé : <span class='key'>externalité négative</span>."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Modèle de Solow, croissance endogène, défis écologiques.",sections:[
+    {h:"Modèle de Solow (1956)",items:[
+     "Y = f(K, L, A) — A = progrès technique = <span class='key'>résidu de Solow</span> (PGF).",
+     "Sans progrès technique, rendements décroissants du capital → la croissance s'épuise.",
+     "<b>Conclusion</b> : le moteur durable est le progrès technique."]},
+    {h:"Innovation et destruction créatrice",items:[
+     "<span class='key'>Schumpeter</span> : 5 types d'innovation (produit, procédé, marché, source, organisation) ; <i>destruction créatrice</i>.",
+     "<span class='key'>Romer</span> : croissance endogène — le progrès technique vient des décisions économiques (R&D, éducation)."]},
+    {h:"4 facteurs de progrès technique",items:[
+     "<b>Capital physique</b> (machines)", "<b>Capital humain</b> (Becker : éducation, formation, santé)",
+     "<b>Capital technologique</b> (R&D, brevets)", "<b>Capital public</b> (infrastructures, recherche fondamentale)"]},
+    {h:"Externalités et défis",items:[
+     "<b>Positives</b> : connaissance produite par une firme profite à toutes (justifie soutien public R&D).",
+     "<b>Négatives</b> : pollution, ressources naturelles, climat — internalisation par taxe ou quota."]},
+    {h:"Plan-type dissertation",items:[
+     "<b>I.</b> La croissance vient de l'accumulation et du progrès technique (Solow + Schumpeter).",
+     "<b>II.</b> Mais elle se heurte à des limites écologiques et sociales."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Romer, Aghion, Acemoglu, débat croissance verte vs décroissance.",sections:[
+    {h:"Approfondissement théorique",items:[
+     "<span class='key'>Romer (Nobel 2018)</span> : croissance endogène, externalités du savoir.",
+     "<span class='key'>Aghion & Howitt</span> : modèle néo-schumpetérien — concurrence stimule l'innovation, brevets nécessaires.",
+     "<span class='key'>Acemoglu & Robinson</span> (<i>Why Nations Fail</i>) : institutions inclusives = condition de la croissance."]},
+    {h:"Données chiffrées (Insee 2024-2025)",items:[
+     "PIB France 2024 ≈ <b>2 822 Md€</b> courants.",
+     "PIB volume +4,3% France entre 2019-2024 vs +0,3% Allemagne.",
+     "Productivité française en recul de ~7% depuis 2019.",
+     "Intensité carbone du PIB français ÷2 depuis 1990. <span class='verif'>[À vérifier]</span>"]},
+    {h:"Débat de fond",items:[
+     "<b>Croissance verte</b> (Stern, Nordhaus) : découplage possible par innovation verte.",
+     "<b>Décroissance</b> (Latouche, Jackson) : découplage absolu jamais observé à l'échelle mondiale.",
+     "<b>Post-croissance</b> (Raworth, théorie du donut) : prospérité dans les limites planétaires."]},
+    {h:"Indicateurs alternatifs",items:[
+     "PIB ≠ bien-être : <span class='key'>IDH, BIP40, empreinte écologique, IPV</span>."]},
+    {h:"Citations",items:[
+     "<div class='quote'>« Le marché concurrentiel n'est pas un état mais un processus. » — Schumpeter</div>",
+     "<div class='quote'>« La croissance est devenue plus chère que les bénéfices qu'elle apporte. » — Herman Daly</div>"]},
+    {h:"Pièges",items:[
+     "Confondre PIB (flux) et patrimoine (stock).",
+     "Oublier que le résidu de Solow ≠ uniquement progrès technique au sens strict (PGF).",
+     "Présenter Schumpeter comme un libéral pur : il anticipe le dépassement du capitalisme."]}
+   ]}],
+  pieges:["Confondre croissance (flux) et développement (qualitatif).",
+   "Réduire le progrès technique aux seules machines.",
+   "Oublier la dimension institutionnelle (Acemoglu)."],
+  plansType:["I. Sources (facteurs + PT) / II. Défis (limites écologiques)",
+   "I. Croissance par accumulation / II. Croissance par innovation / III. Limites"]
+},
+{
+  code:"E2", domaine:"Science économique",
+  titre:"Comment expliquer les crises financières et réguler le système financier ?",
+  evaluableEcrit2026:false, evaluableOral:true,
+  keywords:["crise","subprimes","Minsky","Kindleberger","aléa moral","bulle","bank run","régulation","Bâle","systémique","Fisher"],
+  probaSujet2026:"faible",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir une crise, citer 2008, retenir 2 outils de régulation.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Crise financière</span> : effondrement brutal des marchés (chute, faillites).",
+     "<span class='key'>Bulle spéculative</span> : prix très au-dessus de la valeur fondamentale.",
+     "<span class='key'>Risque systémique</span> : faillite d'une banque entraîne celle des autres."]},
+    {h:"Le déroulé d'une crise",items:[
+     "1. Bulle (achat massif d'un actif). 2. Retournement. 3. Panique, faillites. 4. Contagion à l'économie réelle."]},
+    {h:"L'exemple central : subprimes (2008)",items:[
+     "Banques US ont prêté à des ménages peu solvables (subprimes).",
+     "Faillite de Lehman Brothers (sept. 2008) → récession mondiale 2009."]},
+    {h:"2 outils de régulation",items:[
+     "<b>Banque centrale prêteur en dernier ressort</b>.",
+     "<b>Ratios prudentiels</b> (Bâle) : capital de réserve obligatoire."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Asymétries d'information, aléa moral, régulation prudentielle.",sections:[
+    {h:"3 mécanismes des crises",items:[
+     "<b>Asymétrie d'information</b> → sélection adverse, aléa moral.",
+     "<b>Comportements mimétiques</b> (Keynes : « concours de beauté »).",
+     "<b>Effet de levier</b> : pertes démultipliées en cas de chute."]},
+    {h:"De la finance à l'économie réelle",items:[
+     "<b>Canal du crédit</b> : banques fragiles prêtent moins.",
+     "<b>Effet de richesse négatif</b> : ménages appauvris consomment moins.",
+     "<b>Crise de confiance</b> : bank run, désengagement."]},
+    {h:"Aléa moral & « too big to fail »",items:[
+     "Si on sait être sauvé → on prend plus de risques. Justifie la régulation préventive."]},
+    {h:"Outils de régulation",items:[
+     "<b>Microprudentiel (Bâle III)</b> : fonds propres, liquidité, stress tests.",
+     "<b>Macroprudentiel</b> : surveillance systémique (BCE, FSB).",
+     "<b>Séparation</b> banque dépôt / investissement (Glass-Steagall, loi 2013)."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Minsky, Kindleberger, Reinhart-Rogoff, débat sur Bâle III.",sections:[
+    {h:"Hypothèse d'instabilité financière",items:[
+     "<span class='key'>Minsky</span> : « la stabilité est déstabilisante ». 3 régimes : hedge → speculative → Ponzi.",
+     "Mécanisme endogène : le calme nourrit la prise de risque."]},
+    {h:"Auteurs",items:[
+     "<span class='key'>Kindleberger</span> (<i>Manias, Panics, Crashes</i>) : schéma identique depuis tulipomanie 1637.",
+     "<span class='key'>Reinhart & Rogoff</span> (<i>This Time Is Different</i>, 2009) : 800 ans d'historique.",
+     "<span class='key'>Fisher</span> : <i>debt-deflation</i> (1933).",
+     "<span class='key'>Stiglitz</span> : asymétries d'information (Nobel 2001)."]},
+    {h:"Bilan de Bâle III",items:[
+     "Tier 1 doublé (~14%). Mais shadow banking ~50% du crédit mondial échappe.",
+     "Critique : Admati & Hellwig (<i>The Bankers' New Clothes</i>) — fonds propres encore très insuffisants."]},
+    {h:"Crises récentes",items:[
+     "2010-2012 : dette souveraine zone euro. 2020 : Covid (BCE PEPP). 2023 : SVB, Credit Suisse."]},
+    {h:"Citations",items:[
+     "<div class='quote'>« Le marché peut rester irrationnel plus longtemps que vous ne pouvez rester solvable. » — attribué à Keynes</div>"]}
+   ]}],
+  pieges:["Confondre crise financière et crise économique.","Sous-estimer le shadow banking.","Réduire la régulation à Bâle."],
+  plansType:["I. Mécanismes des crises (asymétrie, mimétisme, levier) / II. Régulation (prudentiel, supervision)"]
+},
+{
+  code:"E3", domaine:"Science économique",
+  titre:"Comment lutter contre le chômage ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["chômage","emploi","Keynes","Phillips","Friedman","NAIRU","SMIC","insider","outsider","flexibilité","hystérèse","Beveridge"],
+  probaSujet2026:"élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir le chômage, 2 causes, 2 politiques.",sections:[
+    {h:"Définitions BIT",items:[
+     "<span class='key'>Chômeur</span> : sans emploi, disponible, recherche active.",
+     "<span class='key'>Taux de chômage</span> = chômeurs / population active × 100.",
+     "Population active = actifs occupés + chômeurs."]},
+    {h:"2 grandes causes",items:[
+     "<b>Conjoncturel</b> (keynésien) : demande insuffisante.",
+     "<b>Structurel</b> (classique) : marché du travail dysfonctionnel."]},
+    {h:"2 politiques",items:[
+     "<b>Relance</b> (keynésienne) : l'État dépense → entreprises embauchent.",
+     "<b>Politique de l'offre</b> (libérale) : baisser coût du travail, flexibiliser."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Types de chômage, débat keynésiens vs néoclassiques, leviers d'action.",sections:[
+    {h:"Types de chômage",items:[
+     "<b>Frictionnel</b> (entre 2 emplois), <b>Structurel</b>, <b>Conjoncturel</b>, <b>Saisonnier</b>, <b>Technologique</b>."]},
+    {h:"Classique vs keynésien",items:[
+     "<b>Classique</b> : salaire réel trop élevé → baisse SMIC/cotisations.",
+     "<b>Keynésien</b> : demande effective insuffisante → relance budgétaire.",
+     "Synthèse : <span class='key'>NAIRU</span> = taux qui n'accélère pas l'inflation."]},
+    {h:"Marché du travail dual",items:[
+     "<span class='key'>Insiders/outsiders</span> (Lindbeck) : insiders protègent leur emploi, outsiders restent dehors."]},
+    {h:"4 leviers publics",items:[
+     "<b>Macro</b> : relance keynésienne (budget, taux).",
+     "<b>Passifs</b> : indemnisation (sécurise, peut désinciter).",
+     "<b>Actifs</b> : formation, accompagnement, contrats aidés.",
+     "<b>Structurels</b> : flexibilité, baisse coût travail."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Phillips, salaire d'efficience, hystérèse, données 2024-2025.",sections:[
+    {h:"Cadres avancés",items:[
+     "<span class='key'>Courbe de Phillips</span> (1958) : invalidée années 70 (stagflation), réhabilitée court terme.",
+     "<span class='key'>Salaire d'efficience</span> (Akerlof, Yellen, Shapiro-Stiglitz) : payer au-dessus du marché → productivité.",
+     "<span class='key'>Diamond-Mortensen-Pissarides (Nobel 2010)</span> : modèle d'appariement.",
+     "<span class='key'>Hystérèse</span> (Blanchard-Summers) : chômage durable devient structurel."]},
+    {h:"Modèles internationaux",items:[
+     "<b>Flexicurité scandinave</b> (DK) : flex+protection, ~5%.",
+     "<b>Anglo-saxon</b> : flex totale, working poor.",
+     "<b>Continental</b> (FR) : protections fortes, dualisation."]},
+    {h:"Données récentes",items:[
+     "Taux de chômage France T4 2025 ≈ <b>7,9%</b> (Insee, plus haut depuis 2021).",
+     "Moyenne 2024 ≈ 7,4%. Non-diplômés 13,8% vs supérieur 5,0%. UE 5,9%.",
+     "Halo du chômage (~1,9 M personnes) → sous-utilisation réelle ~13%.",
+     "Chômage longue durée ≈ 30% des chômeurs."]},
+    {h:"Débats actuels",items:[
+     "Réforme assurance-chômage 2023 (modulation conjoncturelle, logique flexicurité).",
+     "<b>IA</b> : Acemoglu nuance Frey-Osborne — déplace, pas détruit.",
+     "<b>Garantie d'emploi</b> (Tcherneva, MMT) — débat actif."]},
+    {h:"Paradoxe à mobiliser",items:[
+     "<div class='quote'>400 000 emplois non pourvus + 2,3 M chômeurs : le problème = appariement, pas pénurie.</div>"]}
+   ]}],
+  pieges:["Réduire le chômage à un seul type.","Oublier le halo et le sous-emploi.","Confondre coût du travail et salaire net."],
+  plansType:["I. Politiques de demande / II. Politiques d'offre","I. Causes diagnostiquées / II. Politiques mises en œuvre / III. Limites"]
+},
+{
+  code:"E4", domaine:"Science économique",
+  titre:"Quels sont les fondements du commerce international et de l'internationalisation de la production ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["Ricardo","avantages comparatifs","FMN","HOS","Krugman","Melitz","protectionnisme","CVM","IDE","slowbalisation"],
+  probaSujet2026:"moyenne",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir, retenir Ricardo, citer un avantage et un inconvénient.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Commerce international</span> : échanges de B&S entre pays.",
+     "<span class='key'>Libre-échange</span> ≠ <span class='key'>protectionnisme</span>.",
+     "<span class='key'>FMN</span> : firme présente dans plusieurs pays."]},
+    {h:"Ricardo (1817)",items:[
+     "Chacun se spécialise dans son <span class='key'>avantage comparatif</span>.",
+     "Exemple : Portugal-vin / Angleterre-drap → les deux gagnent."]},
+    {h:"Avantages / inconvénients",items:[
+     "<b>+</b> Variété, prix bas, croissance (modèle allemand, chinois).",
+     "<b>−</b> Délocalisations, dépendance, inégalités."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Ricardo / HOS / Krugman, FMN, chaînes de valeur, protectionnisme.",sections:[
+    {h:"3 théories",items:[
+     "<b>Ricardo</b> : avantages comparatifs (productivité).",
+     "<b>HOS</b> : dotations factorielles (pays riche en travail exporte travail-intensif).",
+     "<b>Krugman (1980)</b> : commerce intra-branche, économies d'échelle, différenciation."]},
+    {h:"FMN et fragmentation",items:[
+     "<span class='key'>CVM</span> (chaînes mondiales de valeur) : chaque étape là où c'est rentable.",
+     "Exemple iPhone : design CA, composants Asie, assemblage Chine. Apple capte la VA haute."]},
+    {h:"Pourquoi les FMN s'internationalisent",items:[
+     "Coûts (main d'œuvre, fiscalité) ; marchés ; compétences ; contournement de barrières."]},
+    {h:"Effets sociaux",items:[
+     "<b>Gagnants</b> : consommateurs, exportateurs.",
+     "<b>Perdants</b> : secteurs concurrencés (textile, sidérurgie).",
+     "<span class='key'>Stolper-Samuelson</span> : tend à creuser les inégalités au Nord."]},
+    {h:"3 arguments protectionnistes",items:[
+     "<b>Industrie naissante</b> (List, 1841).",
+     "<b>Stratégique</b> : indépendance (santé, défense).",
+     "<b>Social/environnemental</b> : éviter dumping."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Slowbalisation, Trump 2.0, IRA, Rodrik, Milanovic.",sections:[
+    {h:"État du commerce mondial",items:[
+     "Commerce mondial / PIB ≈ <b>33%</b> — stagnation depuis 2008 (<i>slowbalisation</i>).",
+     "Friend-shoring (Yellen), relocalisation semi-conducteurs/batteries.",
+     "<b>IRA 2022</b>, <b>Chips Act</b> : retour des politiques industrielles.",
+     "<b>Tarifs Trump 2.0</b> 2025 : choc commercial."]},
+    {h:"Limites des théories",items:[
+     "Ricardo suppose plein emploi, immobilité des facteurs.",
+     "<b>Rodrik</b> : trilemme — mondialisation × démocratie × souveraineté = au max 2/3.",
+     "<b>Melitz</b> : firmes hétérogènes — seules les plus productives exportent.",
+     "<b>Cohen, Lorenzi</b> : avantages comparatifs <i>construits</i>."]},
+    {h:"FMN — données",items:[
+     "FMN ≈ 1/3 du PIB mondial, 1/2 du commerce (CNUCED).",
+     "Évasion fiscale : Zucman ~40% des profits FMN en paradis fiscaux.",
+     "Accord OCDE 2021 : impôt minimum mondial 15%."]},
+    {h:"Inégalités et commerce",items:[
+     "<b>Autor-Dorn-Hanson</b> : « China Shock » a détruit ~2 M emplois US (2000-2015).",
+     "<b>Milanovic</b> : courbe de l'éléphant — classes moyennes émergentes ↑, classes moyennes occidentales →.",
+     "Lien avec votes populistes (Brexit, Trump)."]},
+    {h:"Données France",items:[
+     "Déficit commercial 2024 ≈ <b>81 Md€</b>. <span class='verif'>[À vérifier]</span>",
+     "Spécialisations : luxe, agro-alimentaire, aéronautique."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« Le commerce international est une politique étrangère menée par d'autres moyens. » — paraphrase Schmitt</div>"]}
+   ]}],
+  pieges:["Confondre avantage absolu (Smith) et comparatif (Ricardo).","Oublier le commerce intra-branche.","Présenter le protectionnisme comme toujours négatif/positif."],
+  plansType:["I. Fondements (théories) / II. Internationalisation (FMN, CVM)","I. Gains du libre-échange / II. Limites et débats"]
+},
+{
+  code:"E5", domaine:"Science économique",
+  titre:"Quelles politiques économiques dans le cadre européen ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["BCE","euro","Maastricht","policy-mix","Mundell","ZMO","NextGenEU","semestre européen","Aglietta","Tinbergen","inflation"],
+  probaSujet2026:"faible",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Connaître les institutions, les critères, citer la BCE.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Marché unique</span> : libre circulation B/S/K/personnes (Acte unique 1986, achevé 1993).",
+     "<span class='key'>Zone euro</span> : 1999, monnaie unique gérée par la <span class='key'>BCE</span>.",
+     "<span class='key'>Politique monétaire</span> : taux directeurs, masse monétaire (BCE).",
+     "<span class='key'>Politique budgétaire</span> : recettes/dépenses publiques (États)."]},
+    {h:"Critères de Maastricht (1992)",items:[
+     "Déficit public < 3% PIB.","Dette publique < 60% PIB.",
+     "Inflation et taux modérés."]},
+    {h:"Un exemple récent",items:[
+     "Plan <b>NextGenerationEU</b> (2020) : 750 Md€ pour relancer après Covid."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Articulation BCE / États, policy-mix, contraintes asymétriques.",sections:[
+    {h:"Architecture européenne",items:[
+     "<b>BCE</b> : politique monétaire, indépendante, mandat = stabilité des prix (~2%).",
+     "<b>États</b> : politiques budgétaires, sous contrainte du Pacte de stabilité (1997).",
+     "<span class='key'>Semestre européen</span> : coordination annuelle des politiques.",
+     "<span class='key'>MES</span> : mécanisme européen de stabilité (sauvetage)."]},
+    {h:"Policy-mix",items:[
+     "Combinaison de politique monétaire et budgétaire.",
+     "Ex. 2020-2022 : BCE accommodante (PEPP) + relance budgétaire massive (NextGenEU)."]},
+    {h:"Politique monétaire",items:[
+     "<b>Conventionnelle</b> : taux directeurs (refinancement, dépôt).",
+     "<b>Non conventionnelle</b> : QE (assouplissement quantitatif), forward guidance.",
+     "Mécanisme : taux ↓ → crédit ↑ → demande ↑ → inflation ↑ et activité ↑."]},
+    {h:"Limites",items:[
+     "<b>Chocs asymétriques</b> : un même taux ne convient pas à tous (cf. crise grecque).",
+     "Pas d'union budgétaire complète.",
+     "Coordination difficile : 27 États, 20 dans la zone euro."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Mundell, Tinbergen, débat sur la ZMO et la dette.",sections:[
+    {h:"Cadres théoriques",items:[
+     "<span class='key'>Mundell</span> : zone monétaire optimale (ZMO) — mobilité du travail, flexibilité des prix, transferts budgétaires.",
+     "<span class='key'>Tinbergen</span> : règle des instruments — il faut au moins autant d'instruments que d'objectifs.",
+     "<span class='key'>Aglietta</span> : critique d'une intégration monétaire sans intégration budgétaire."]},
+    {h:"La crise des dettes souveraines (2010-2012)",items:[
+     "Grèce, Irlande, Portugal, Espagne, Italie.",
+     "Réponse : MES, programmes d'austérité, OMT (Draghi : « <i>whatever it takes</i> », 2012).",
+     "Bilan : zone euro préservée, mais coût social fort."]},
+    {h:"Données 2022-2024",items:[
+     "Pic d'inflation zone euro <b>10,6%</b> en oct. 2022.",
+     "BCE : taux remontés jusqu'à <b>4%</b> en 2023 (taux dépôt).",
+     "Déficit France 2024 ≈ <b>5,8%</b> du PIB ; dette > <b>110%</b> du PIB. <span class='verif'>[À vérifier]</span>",
+     "<b>NextGenEU</b> : 750 Md€ (390 subventions + 360 prêts)."]},
+    {h:"Débats actuels",items:[
+     "Réforme du Pacte de stabilité (2024) : trajectoires individualisées.",
+     "Union bancaire incomplète : SRM, garantie unifiée des dépôts en suspens.",
+     "Eurobonds : NextGenEU = 1ère émission commune, précédent fort.",
+     "<b>Politique de la concurrence</b> (DG COMP) vs champions européens."]},
+    {h:"Citations",items:[
+     "<div class='quote'>« Whatever it takes. » — Mario Draghi, 2012</div>",
+     "<div class='quote'>« L'euro est une monnaie sans État, l'État est sans monnaie. » — Aglietta</div>"]}
+   ]}],
+  pieges:["Confondre BCE et FED (mandats différents).","Croire que la BCE peut financer directement les États (interdit par traités).","Réduire l'UE à la seule zone euro."],
+  plansType:["I. Politique monétaire (BCE) / II. Politique budgétaire (États) / III. Coordination",
+   "I. Atouts du cadre européen / II. Limites et chantiers"]
+},
+/* ===================== SOCIOLOGIE & SCIENCE POLITIQUE ===================== */
+{
+  code:"S1", domaine:"Sociologie & science politique",
+  titre:"Comment est structurée la société française actuelle ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["classes","PCS","Marx","Weber","Bourdieu","Chauvel","Peugny","Piketty","moyennisation","individualisation"],
+  probaSujet2026:"élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir une classe, citer Marx/Weber, savoir les PCS.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Classe sociale</span> : grand groupe partageant une position dans la société.",
+     "<span class='key'>PCS</span> Insee : 6 grandes catégories (agri, ACCE, cadres, PI, employés, ouvriers)."]},
+    {h:"Marx vs Weber",items:[
+     "<b>Marx</b> : 2 classes selon rapport au travail — bourgeoisie vs prolétariat.",
+     "<b>Weber</b> : 3 dimensions — économique, statut, parti."]},
+    {h:"Évolutions",items:[
+     "Diminution ouvriers/agriculteurs depuis 1945. Hausse cadres/employés. <span class='key'>Tertiarisation</span>."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Facteurs multiples, Bourdieu, débat moyennisation/persistance.",sections:[
+    {h:"Facteurs de structuration",items:[
+     "<b>PCS</b>, <b>revenu/patrimoine</b> (top 10% détient ~50% du patrimoine), <b>diplôme</b>, <b>genre</b>, <b>âge</b>, <b>territoire</b>."]},
+    {h:"Bourdieu",items:[
+     "3 capitaux : <b>économique</b>, <b>culturel</b> (incorporé, objectivé, institutionnalisé), <b>social</b>.",
+     "Convertibles, transmissibles → reproduction sociale."]},
+    {h:"Moyennisation (Mendras 1988) vs retour des classes",items:[
+     "<b>Pour</b> : démocratisation consommation, accès logement, éducation.",
+     "<b>Contre</b> : Chauvel, Bouffartigue — fragmentation, déclassement, sentiment de relégation."]},
+    {h:"Plan-type",items:[
+     "<b>I.</b> Multiples facteurs (PCS, capitaux, genre, âge, territoire).",
+     "<b>II.</b> Débat moyennisation vs clivages persistants."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Pinçon-Charlot, Coulangeon, intersectionnalité, données 2024.",sections:[
+    {h:"Auteurs contemporains",items:[
+     "<span class='key'>Pinçon-Charlot</span> : grande bourgeoisie = seule classe consciente d'elle-même.",
+     "<span class='key'>Coulangeon</span> : pratiques culturelles, omnivorisme (Bourdieu actualisé).",
+     "<span class='key'>Beaud, Pialoux</span> : ouvriers invisibilisés.",
+     "<span class='key'>Piketty</span> : top 10% détient ~50% du patrimoine, top 1% ~25%."]},
+    {h:"Données précises",items:[
+     "Cadres ≈ <b>22%</b> des actifs (vs 8% en 1982).",
+     "Ouvriers ≈ <b>19%</b> (vs 35% en 1982).",
+     "Salariés = <b>89%</b> des actifs occupés.",
+     "Tertiaire ≈ <b>80%</b> de l'emploi.",
+     "Rapport interdécile D9/D1 ≈ <b>3,5</b> (niveau de vie).",
+     "1 enfant de cadre sur 2 devient cadre ; 1 enfant d'ouvrier sur 10."]},
+    {h:"Théorisations récentes",items:[
+     "<span class='key'>Société du déclassement</span> (Chauvel) : générations récentes < parents.",
+     "<span class='key'>Sécession des élites</span> (Lasch, Guilluy) : entre-soi métropoles.",
+     "<span class='key'>Intersectionnalité</span> (Crenshaw) : classe + genre + race."]},
+    {h:"Débat individualisation vs classes",items:[
+     "<b>Singly, Beck</b> : fin du déterminisme de classe.",
+     "<b>Bouffartigue, Pinçon</b> : classes existent mais diffuses, en soi sans être pour soi.",
+     "Synthèse : individualisation des trajectoires + persistance des inégalités structurelles."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« La classe sociale est partout, mais elle ne dit plus son nom. » — paraphrase de S. Beaud</div>"]}
+   ]}],
+  pieges:["Réduire la structure aux PCS.","Opposer Marx et Weber (ils sont complémentaires).","Conclure trop vite à la fin des classes."],
+  plansType:["I. La société peut être lue en classes (Marx, Bourdieu) / II. Mais d'autres clivages la traversent (genre, âge, territoire)"]
+},
+{
+  code:"S2", domaine:"Sociologie & science politique",
+  titre:"Quelle est l'action de l'École sur les destins individuels et sur la société ?",
+  evaluableEcrit2026:false, evaluableOral:true,
+  keywords:["école","massification","démocratisation","Bourdieu","Boudon","Merle","Duru-Bellat","capital culturel","paradoxe d'Anderson"],
+  probaSujet2026:"faible",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Missions de l'école, massification ≠ démocratisation.",sections:[
+    {h:"Les missions",items:[
+     "<b>Instruire</b>, <b>socialiser</b>, <b>sélectionner</b>."]},
+    {h:"Massification ≠ démocratisation",items:[
+     "<b>Massification</b> : plus d'élèves au bac (~80% d'une génération).",
+     "<b>Démocratisation</b> : égalisation des chances — partielle en France."]},
+    {h:"Chiffres",items:[
+     "Bac ≈ <b>80%</b> d'une génération (vs 5% en 1950).",
+     "Études supérieures ≈ <b>51%</b>. Enfants de cadres surreprésentés en CPGE et grandes écoles."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Bourdieu vs Boudon, inégalités scolaires multiples.",sections:[
+    {h:"Bourdieu — reproduction culturelle",items:[
+     "<i>La Reproduction</i> (1970) : école valorise le capital culturel des classes supérieures.",
+     "Reproduit les inégalités tout en les légitimant.",
+     "<span class='key'>Violence symbolique</span> : intériorisation de l'infériorité."]},
+    {h:"Boudon — choix rationnels",items:[
+     "<i>L'Inégalité des chances</i> (1973) : choix individuels à chaque palier.",
+     "Familles modestes pèsent coût/risque/bénéfice différemment."]},
+    {h:"3 inégalités majeures",items:[
+     "<b>Sociales</b> : 1/2 enfants de cadres en études longues vs 1/10 ouvriers.",
+     "<b>Genre</b> : filles meilleures, mais s'orientent moins vers sciences/maths.",
+     "<b>Territoriales</b> : effets d'établissement, REP, ruralité."]},
+    {h:"Ascenseur social ?",items:[
+     "Massification ouvre opportunités. Mais <span class='key'>paradoxe d'Anderson</span> : un même diplôme vaut moins."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Duru-Bellat, données PISA 2022, Sandel, comparaisons internationales.",sections:[
+    {h:"Approfondissement",items:[
+     "Bourdieu = <b>structure</b> ; Boudon = <b>action</b>.",
+     "<b>Lahire</b> : <i>L'homme pluriel</i> — dispositions multiples.",
+     "<b>Merle</b> : <i>démocratisation ségrégative</i> — l'égalité progresse aux niveaux les plus bas mais pas au sommet."]},
+    {h:"Données récentes (PISA 2022)",items:[
+     "France dans la moyenne OCDE.",
+     "Écart de score en maths favorisé/défavorisé : <b>113 points</b> France vs 86 OCDE.",
+     "Top 10% grandes écoles : ~<b>70%</b> CSP+ (Pierre Merle).",
+     "53% des enfants de cadres titulaires d'un master à 30 ans vs <b>12%</b> enfants d'ouvriers (DEPP)."]},
+    {h:"Auteurs contemporains",items:[
+     "<span class='key'>Duru-Bellat</span> : <i>L'inflation scolaire</i>.",
+     "<span class='key'>Beaud, Mauger</span> : <i>80% au bac... et après ?</i>.",
+     "<span class='key'>Van Zanten</span> : stratégies parentales CSP+ (carte scolaire, options rares)."]},
+    {h:"Débat sur le mérite",items:[
+     "<span class='key'>Sandel</span> (<i>The Tyranny of Merit</i>) : méritocratie nourrit arrogance des gagnants.",
+     "<span class='key'>Dubet</span> : mérite = idéal nécessaire, insuffisant si position de départ inégale."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« L'école rend légitimes des inégalités qu'elle ne combat pas. » — synthèse Bourdieu</div>"]}
+   ]}],
+  pieges:["Confondre massification et démocratisation.","Opposer Bourdieu et Boudon (compatibles).","Oublier les inégalités de genre et territoriales."],
+  plansType:["I. L'école comme égalisateur (massification) / II. L'école comme reproducteur (Bourdieu, Boudon)"]
+},
+{
+  code:"S3", domaine:"Sociologie & science politique",
+  titre:"Quels sont les caractéristiques contemporaines et les facteurs de la mobilité sociale ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["mobilité","reproduction","table","fluidité","Goldthorpe","Vallet","ascendante","descendante","déclassement"],
+  probaSujet2026:"élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir la mobilité, ses formes, une cause.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Mobilité sociale</span> : changement de position.",
+     "<span class='key'>Intergénérationnelle</span> (vs <span class='key'>intragénérationnelle</span>).",
+     "<span class='key'>Reproduction sociale</span> : même position que les parents."]},
+    {h:"Formes",items:[
+     "<b>Ascendante</b>, <b>descendante</b>, <b>horizontale</b>."]},
+    {h:"Cause majeure",items:[
+     "<span class='key'>Mobilité structurelle</span> : changement de structure des emplois (moins d'ouvriers, plus de cadres)."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Lire une table, distinguer mobilité observée/structurelle/nette/fluidité.",sections:[
+    {h:"Table de mobilité",items:[
+     "Croise PCS père / PCS fils. <b>Ligne</b>=origine, <b>colonne</b>=destinée. <b>Diagonale</b>=reproduction."]},
+    {h:"4 indicateurs",items:[
+     "<b>Mobilité observée</b> = % PCS différente du père.",
+     "<b>Structurelle</b> = due au changement de structure.",
+     "<b>Nette</b> = observée − structurelle.",
+     "<b>Fluidité</b> = indépendance origine/destinée."]},
+    {h:"Chiffres France (Vallet)",items:[
+     "<b>65%</b> des hommes 35-59 ans n'occupent pas la PCS de leur père.",
+     "Mais essentiel = mobilité <b>structurelle</b>.",
+     "<b>Fluidité stagne</b> depuis années 1980. Mobilité descendante en hausse."]},
+    {h:"Facteurs",items:[
+     "École/diplôme (principal), structure des emplois, configurations familiales, mariage (homogamie), genre."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Goldthorpe-Erikson (CASMIN), Chetty, débat déclassement.",sections:[
+    {h:"Cadre théorique",items:[
+     "<span class='key'>Goldthorpe & Erikson</span> (<i>The Constant Flux</i>, 1992) : mobilité absolue vs relative.",
+     "Hypothèse FJH : fluidité ≈ stable entre pays développés.",
+     "<span class='key'>Schéma EGP</span> : nomenclature internationale."]},
+    {h:"Mesures France récentes",items:[
+     "<b>Vallet (2017)</b> : fluidité légère hausse jusqu'aux années 80, puis stagne.",
+     "Mobilité descendante : ~25% des fils de cadres déclassés.",
+     "23% des fils de cadres deviennent cadres vs <b>10%</b> des fils d'ouvriers (Insee FQP)."]},
+    {h:"Approche par les revenus (Chetty)",items:[
+     "Corrélation parents/enfants ≈ <b>0,4</b> France.",
+     "Probabilité quintile bas → quintile haut ≈ <b>9%</b>.",
+     "<span class='key'>Courbe de Gatsby</span> (Krueger) : plus inégal → moins mobile."]},
+    {h:"Comparaisons",items:[
+     "Scandinaves : forte mobilité, faibles inégalités.",
+     "USA : mobilité moindre que perçue (Chetty)."]},
+    {h:"Déclassement (Chauvel, Peugny)",items:[
+     "<b>Objectif</b> (position < parents), <b>scolaire</b> (emploi < diplôme), <b>subjectif</b> (sentiment)."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« On monte, mais beaucoup moins haut qu'on croit. » — synthèse Peugny</div>"]}
+   ]}],
+  pieges:["Confondre mobilité observée et fluidité.","Oublier la mobilité descendante.","Ignorer le paradoxe d'Anderson."],
+  plansType:["I. La société française connaît une mobilité importante / II. Mais la fluidité reste limitée et la reproduction persiste"]
+},
+{
+  code:"S4", domaine:"Sociologie & science politique",
+  titre:"Quelles mutations du travail et de l'emploi ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["travail","emploi","salariat","NTIC","plateformisation","Castel","désaffiliation","polarisation","Méda","Friot"],
+  probaSujet2026:"très élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Distinguer travail/emploi, citer une mutation.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Travail</span> : activité productive.",
+     "<span class='key'>Emploi</span> : travail rémunéré, encadré juridiquement.",
+     "Statuts : indépendant, salarié, fonctionnaire."]},
+    {h:"3 mutations",items:[
+     "<b>Tertiarisation</b>, <b>salarisation</b>, <b>polarisation</b>."]},
+    {h:"Exemple",items:[
+     "Plateformes (Uber, Deliveroo) : nouveaux indépendants, statut hybride."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"NTIC, mondialisation, qualifications, intégration sociale.",sections:[
+    {h:"4 facteurs",items:[
+     "<b>NTIC</b> : automatisation, télétravail, IA.",
+     "<b>Mondialisation</b> : concurrence, délocalisations.",
+     "<b>Tertiarisation/financiarisation</b>.",
+     "<b>Sociodémographique</b> : femmes au travail, vieillissement."]},
+    {h:"Qualifications",items:[
+     "<b>Élévation moyenne</b> + <b>polarisation</b> (Goos & Manning, Autor) — emplois routiniers de milieu détruits.",
+     "Fragilisation des classes moyennes."]},
+    {h:"Formes d'emploi",items:[
+     "CDI ~75% mais <b>87%</b> des nouvelles embauches en CDD.",
+     "Auto-entrepreneuriat ×10 depuis 2010. Halo, sous-emploi."]},
+    {h:"Intégration sociale (Castel)",items:[
+     "<i>Les Métamorphoses de la question sociale</i> (1995) : emploi stable = pilier de l'intégration.",
+     "3 dimensions : économique, symbolique, relationnelle.",
+     "<span class='key'>Désaffiliation</span> quand l'emploi se précarise."]},
+    {h:"Plan-type",items:[
+     "<b>I.</b> Le travail change (qualifications, formes, organisation).",
+     "<b>II.</b> Effets ambivalents sur l'intégration."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Méda, Boltanski-Chiapello, plateformisation, IA, données 2024.",sections:[
+    {h:"Auteurs",items:[
+     "<span class='key'>Castel</span> : société salariale, désaffiliation.",
+     "<span class='key'>Méda</span> : <i>Le Travail, une valeur en voie de disparition ?</i>.",
+     "<span class='key'>Boltanski & Chiapello</span> : <i>Le Nouvel esprit du capitalisme</i> — autonomie/créativité au prix de l'insécurité.",
+     "<span class='key'>Friot</span> : défense du salariat comme conquête.",
+     "<span class='key'>Paugam</span> : intégration professionnelle (4 types)."]},
+    {h:"Données récentes",items:[
+     "<b>30,4 M emplois</b> en France fin 2023.",
+     "Femmes = <b>48,5%</b> de l'emploi.",
+     "Télétravail post-Covid ≈ <b>25%</b> des cadres ≥1 j/sem.",
+     "<b>~2,5 M auto-entrepreneurs</b>. ~<b>3 M</b> travailleurs de plateformes (estim. élargie). <span class='verif'>[À vérifier]</span>"]},
+    {h:"Rapport au travail change",items:[
+     "Centralité décroît chez les jeunes.",
+     "<b>Bullshit jobs</b> (Graeber) : 1/4 estiment leur métier inutile.",
+     "Burn-out, démissions silencieuses, <i>quiet quitting</i>."]},
+    {h:"IA et avenir du travail",items:[
+     "<b>Frey-Osborne 2013</b> : 47% emplois US automatisables — chiffre nuancé.",
+     "<b>Acemoglu-Restrepo</b> : IA déplace, ne détruit pas, mais réduit la part du travail dans la VA."]},
+    {h:"Plateformisation",items:[
+     "<span class='key'>Capitalisme de plateforme</span> (Srnicek). Subordination algorithmique.",
+     "Loi 2022 (FR), CJUE Uber UK : tendance à requalifier."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« Le salariat n'a pas seulement été un statut, il a été un rempart contre l'arbitraire. » — Castel</div>"]}
+   ]}],
+  pieges:["Confondre travail et emploi.","Oublier la dimension symbolique du travail.","Réduire les plateformes à un cas anecdotique."],
+  plansType:["I. Mutations objectives (qualifications, formes, organisation) / II. Effets sur l'intégration sociale"]
+},
+{
+  code:"S5", domaine:"Sociologie & science politique",
+  titre:"Comment expliquer l'engagement politique dans les sociétés démocratiques ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["engagement","Olson","incitations","passager clandestin","NMS","Touraine","Tarrow","Tilly","Ion","Inglehart"],
+  probaSujet2026:"élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir, citer 3 formes, un exemple.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Engagement politique</span> : actions visant à influencer la vie publique.",
+     "<span class='key'>Action collective</span> : action concertée d'un groupe."]},
+    {h:"Formes",items:[
+     "<b>Vote</b>, <b>militantisme</b>, <b>manif/grève/pétition</b>, <b>engagement individuel</b> (consommation responsable, ZAD)."]},
+    {h:"Exemple",items:[
+     "Mai 68, Gilets jaunes (2018), marches climat."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Olson, ressorts non-économiques, NMS.",sections:[
+    {h:"Paradoxe d'Olson (1965)",items:[
+     "Si chacun préfère bénéficier sans contribuer (<span class='key'>passager clandestin</span>) → personne ne s'engage.",
+     "→ <span class='key'>Incitations sélectives</span> (avantages réservés : assurance syndicale, réseau, prestige)."]},
+    {h:"Au-delà d'Olson",items:[
+     "Convictions, <b>émotions</b>, <b>incitations symboliques</b> (reconnaissance, identité), <b>sociabilités</b>."]},
+    {h:"Variables sociales",items:[
+     "Âge (jeunes : NMS, plus âgés : vote), diplôme (+), genre, PCS (CSP+ : partis ; ouvriers/employés : syndicats)."]},
+    {h:"Anciens vs Nouveaux mouvements",items:[
+     "<b>Anciens</b> : ouvriers, conflictualité salariale.",
+     "<b>NMS</b> (Touraine, Inglehart) : féminisme, écologie, LGBT, identités, valeurs post-matérialistes.",
+     "Passage du <i>combat pour avoir</i> au <i>combat pour être</i>."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Tilly, données récentes, recomposition de l'engagement.",sections:[
+    {h:"Cadres avancés",items:[
+     "<span class='key'>Tilly</span> : répertoires d'action collective.",
+     "<span class='key'>Tarrow, McAdam, Tilly</span> : structures d'opportunités politiques.",
+     "<span class='key'>Inglehart</span> : valeurs matérialistes → post-matérialistes.",
+     "<span class='key'>Gaxie</span> (1977) : rétributions du militantisme."]},
+    {h:"Vote en France",items:[
+     "Abstention record législatives 2022 : <b>54%</b> au 2ⁿᵈ tour. <span class='verif'>[À vérifier]</span>",
+     "Décorrélation classe-vote ; jeunes votent moins, s'engagent autrement.",
+     "Syndicalisation France ≈ <b>10%</b> (le plus bas OCDE)."]},
+    {h:"Nouvelles formes",items:[
+     "<span class='key'>Engagement distancié</span> (J. Ion).",
+     "Numérique : pétitions en ligne, mobilisations Twitter, <i>slacktivisme</i>.",
+     "Consumérisme politique (boycott).",
+     "ZAD, désobéissance civile (Extinction Rebellion, Soulèvements de la Terre)."]},
+    {h:"Cas récents",items:[
+     "<b>Gilets jaunes 2018</b> : horizontal, sans leader, ancrage périphérique.",
+     "<b>Climat</b> : Greta Thunberg, marches mondiales — Génération Z.",
+     "<b>#MeToo</b> : transnational, médias sociaux infrastructure.",
+     "<b>Anti-réforme retraites 2023</b> : inter-syndicale unitaire."]},
+    {h:"Débat",items:[
+     "<b>Putnam</b> (<i>Bowling Alone</i>) : déclin du capital social.",
+     "<b>Ion, Rosanvallon</b> : recomposition (vertical → horizontal).",
+     "Synthèse : déclin de certaines formes + floraison de nouvelles."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« On ne vote plus comme on était, on vote comme on se sent. » — paraphrase de Bréchon</div>"]}
+   ]}],
+  pieges:["Réduire l'engagement au vote.","Oublier les incitations symboliques.","Présenter la baisse syndicale comme une fin de l'engagement."],
+  plansType:["I. Logiques de l'engagement (Olson + non-éco) / II. Mutations contemporaines (NMS, distancié, numérique)"]
+},
+/* ===================== REGARDS CROISÉS ===================== */
+{
+  code:"R1", domaine:"Regards croisés",
+  titre:"Quelles inégalités sont compatibles avec les différentes conceptions de la justice sociale ?",
+  evaluableEcrit2026:false, evaluableOral:true,
+  keywords:["justice sociale","Rawls","Nozick","Sen","Hayek","Honneth","Gini","redistribution","égalité","équité","discrimination"],
+  probaSujet2026:"faible",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Définir justice/égalité/équité, citer Rawls.",sections:[
+    {h:"Définitions",items:[
+     "<span class='key'>Égalité formelle</span> : mêmes droits pour tous (devant la loi).",
+     "<span class='key'>Égalité réelle</span> : conditions effectivement comparables.",
+     "<span class='key'>Équité</span> : traiter différemment les situations différentes pour aboutir à un juste."]},
+    {h:"Outils de la justice sociale",items:[
+     "<b>Redistribution</b> (impôts, prestations).",
+     "<b>Services publics</b> (école, santé) — gratuité.",
+     "<b>Discriminations positives</b> (REP, cordées de la réussite)."]},
+    {h:"Rawls (1971)",items:[
+     "<i>Théorie de la justice</i> : <span class='key'>voile d'ignorance</span> + <span class='key'>principe de différence</span> (les inégalités acceptables sont celles qui profitent aux plus défavorisés)."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"3 conceptions, redistribution, action positive.",sections:[
+    {h:"3 grandes conceptions",items:[
+     "<b>Libérale-utilitariste</b> : maximiser l'utilité globale (utilitarisme).",
+     "<b>Libertarienne</b> (Nozick, 1974) : justice = respect des droits individuels, pas de redistribution forcée.",
+     "<b>Égalitariste-rawlsienne</b> : égalité des chances + principe de différence."]},
+    {h:"Outils de redistribution",items:[
+     "<b>Verticale</b> : du riche vers le pauvre (impôt progressif).",
+     "<b>Horizontale</b> : entre actifs/retraités, valides/handicapés (Sécu).",
+     "<b>Action positive</b> : discriminations correctives (CEP Sciences Po, parité, cordées)."]},
+    {h:"Limites",items:[
+     "<b>Effets désincitatifs</b> (trappe à inactivité).",
+     "<b>Acceptabilité sociale</b>.",
+     "<b>Stigmatisation</b> de la discrimination positive (Sander)."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Sen, Hayek, Honneth, Tirole, données 2022.",sections:[
+    {h:"Auteurs avancés",items:[
+     "<span class='key'>Sen (Nobel 1998)</span> : approche par les <b>capabilités</b> — la justice = effective liberté de choisir sa vie.",
+     "<span class='key'>Hayek</span> : la justice sociale est un mirage, l'ordre spontané du marché ne peut être qualifié de juste/injuste.",
+     "<span class='key'>Honneth</span> : justice = reconnaissance, dimension symbolique.",
+     "<span class='key'>Tirole</span> : marché doit être encadré pour produire des résultats justes."]},
+    {h:"Données France",items:[
+     "Coefficient de Gini ≈ <b>0,29</b> (revenu disponible) vs ~0,42 avant redistribution.",
+     "Écart salarial femmes/hommes ETP ≈ <b>14,2%</b> en 2022 (Insee).",
+     "Top 10% détient ~<b>50%</b> du patrimoine."]},
+    {h:"Discriminations",items:[
+     "<b>Plafond de verre</b>, ségrégation territoriale, discriminations à l'embauche (testing : nom à consonance étrangère = -50% rappels).",
+     "Réponse : politique de la ville, parité, testing, défenseur des droits."]},
+    {h:"Débat actuel",items:[
+     "Méritocratie (Sandel : <i>Tyranny of Merit</i>) — la justice par le mérite légitime aussi les humiliés.",
+     "<b>Universalisme</b> (Schnapper) vs <b>politique de la reconnaissance</b> (multiculturalisme)."]},
+    {h:"Citations",items:[
+     "<div class='quote'>« Sous le voile d'ignorance, nul ne sait quelle place il occupera dans la société. » — Rawls</div>",
+     "<div class='quote'>« La justice sociale est un mirage. » — Hayek</div>"]}
+   ]}],
+  pieges:["Confondre égalité et équité.","Réduire la justice à la redistribution monétaire (oublier reconnaissance, capabilités).","Présenter une seule conception comme « la » justice."],
+  plansType:["I. Inégalités acceptables selon différentes conceptions / II. Limites et débats contemporains"]
+},
+{
+  code:"R2", domaine:"Regards croisés",
+  titre:"Quelle action publique pour l'environnement ?",
+  evaluableEcrit2026:true, evaluableOral:true,
+  keywords:["climat","Pigou","Coase","Ostrom","Hardin","biens communs","externalités","ETS","CBAM","quotas","Stern","Nordhaus"],
+  probaSujet2026:"élevée",
+  niveaux:[
+   {label:"Basique",note:"10/20",intro:"Pourquoi l'État intervient, 2 outils.",sections:[
+    {h:"Pourquoi l'État",items:[
+     "Environnement = <span class='key'>bien commun</span>, soumis à <span class='key'>externalités négatives</span>.",
+     "Sans intervention : <b>tragédie des biens communs</b> (Hardin)."]},
+    {h:"3 outils",items:[
+     "<b>Réglementation</b> (interdiction plastique, normes Euro).",
+     "<b>Taxation</b> (taxe carbone, malus auto).",
+     "<b>Quotas marchands</b> (ETS européen)."]},
+    {h:"Enjeu",items:[
+     "GIEC : +1,1°C déjà observé, objectif Paris +1,5°C.",
+     "−43% émissions mondiales d'ici 2030."]}
+   ]},
+   {label:"Solide",note:"14/20",intro:"Pigou, Coase, Ostrom, gouvernance multi-niveaux.",sections:[
+    {h:"3 approches",items:[
+     "<b>Pigou (1920)</b> : taxer la pollution à hauteur du coût social.",
+     "<b>Coase (1960)</b> : créer des droits de propriété → marchés de quotas.",
+     "<b>Ostrom (Nobel 2009)</b> : communautés peuvent gérer collectivement les communs (règles partagées)."]},
+    {h:"Outils en détail",items:[
+     "Réglementation : efficace mais peu flexible.",
+     "Taxe carbone France ≈ 44€/t (gelée depuis 2018 — Gilets jaunes).",
+     "<b>SEQE-UE / ETS</b> : ~70-90€/t (2024).",
+     "Subventions/labels : MaPrimeRénov', RSE."]},
+    {h:"Gouvernance multi-niveaux",items:[
+     "<b>International</b> : Accord de Paris 2015, COP, ODD.",
+     "<b>Européen</b> : Pacte vert (Green Deal), Fit for 55, <b>CBAM</b> (mécanisme d'ajustement carbone aux frontières, opérationnel 2026).",
+     "<b>National</b> : SNBC, loi climat-résilience.",
+     "<b>Local</b> : PCAET, ZFE."]},
+    {h:"Limites",items:[
+     "<b>Acceptabilité</b> (Gilets jaunes).",
+     "<b>Fuites de carbone</b>.",
+     "<b>Passager clandestin</b> à l'échelle internationale.",
+     "<b>Court-termisme</b> politique vs long terme du climat."]}
+   ]},
+   {label:"Excellence",note:"18/20",intro:"Stern, Nordhaus, justice climatique, débats actuels.",sections:[
+    {h:"Auteurs",items:[
+     "<span class='key'>Stern (2006)</span> : agir = 1% PIB mondial ; ne pas agir = 5-20%.",
+     "<span class='key'>Nordhaus (Nobel 2018)</span> : modèle DICE — taxe carbone optimale 50-100$/t.",
+     "<span class='key'>Tirole, Gollier</span> : prix du carbone unique mondial.",
+     "<span class='key'>Daly, Latouche</span> : remettre en cause la croissance."]},
+    {h:"Justice climatique",items:[
+     "Top 10% mondiaux émettent <b>50%</b> du CO₂ (Chancel, Piketty).",
+     "Pays pauvres et populations vulnérables subissent plus.",
+     "<b>Loss & Damage Fund</b> (COP27).",
+     "Inégalités intergénérationnelles."]},
+    {h:"Politiques européennes",items:[
+     "<b>Pacte vert (2019)</b> : neutralité 2050.",
+     "<b>Fit for 55 (2021)</b> : −55% émissions d'ici 2030.",
+     "<b>CBAM (2023→2026)</b> : taxe carbone à l'import.",
+     "<b>ETS 2 (2027)</b> : extension transport routier et bâtiment."]},
+    {h:"Débats",items:[
+     "Décroissance vs croissance verte (découplage absolu possible ?).",
+     "Adaptation vs atténuation.",
+     "Géoingénierie : CCS, aérosols.",
+     "Devoir de vigilance, procès climatiques (Notre Affaire à Tous, Total, Shell)."]},
+    {h:"Données",items:[
+     "Émissions France 2023 ≈ <b>393 Mt CO₂eq</b> (-20% vs 1990).",
+     "1ère COP = 1995. <b>COP28</b> (Dubaï 2023) : 1ère mention explicite des fossiles.",
+     "Investissements verts mondiaux ≈ 1 800 Md$/an, 4× moins que nécessaire (AIE)."]},
+    {h:"Citation",items:[
+     "<div class='quote'>« Le marché ne sait pas voir au-delà du court terme : c'est à l'action publique de penser pour les générations futures. » — Tirole</div>"]}
+   ]}],
+  pieges:["Réduire à la seule taxe carbone.","Oublier Ostrom (alternative aux 2 modèles classiques).","Ignorer la dimension internationale (passager clandestin)."],
+  plansType:["I. Pourquoi l'action publique (externalités, communs) / II. Quels outils et à quels niveaux"]
+}
+];
+
+/* ============================================================
+   FLASHCARDS SEED — ≥30 par chapitre, ≥360 au total
+   Format compact : c=chapitre, t=type, f=front, b=back, tags
+   types : def | aut | mec | chf | cit | exp | cnc (concept)
+   ============================================================ */
+const FC_SEED = [
+/* === E1 Croissance (30) === */
+{c:"E1",t:"def",f:"Croissance économique",b:"Augmentation soutenue, sur une longue période, de la production en volume (PIB en volume) d'un pays."},
+{c:"E1",t:"def",f:"PIB",b:"Produit Intérieur Brut : valeur monétaire des biens et services produits sur le territoire national en un an."},
+{c:"E1",t:"def",f:"PGF (productivité globale des facteurs)",b:"Part de la croissance non expliquée par l'augmentation des facteurs travail/capital — mesure du progrès technique (résidu de Solow)."},
+{c:"E1",t:"def",f:"Productivité du travail",b:"Q/L : production rapportée à la quantité de travail mobilisée."},
+{c:"E1",t:"def",f:"Capital humain",b:"Stock de connaissances, compétences et santé incorporées dans les individus (Becker, 1964)."},
+{c:"E1",t:"def",f:"Externalité",b:"Effet de l'activité d'un agent sur un autre, non pris en compte par le marché. Positive (savoir) ou négative (pollution)."},
+{c:"E1",t:"def",f:"Croissance soutenable",b:"Croissance qui répond aux besoins présents sans compromettre ceux des générations futures (Brundtland 1987)."},
+{c:"E1",t:"aut",f:"Adam Smith",b:"1723-1790, La Richesse des nations (1776). Division du travail comme source de productivité."},
+{c:"E1",t:"aut",f:"Robert Solow",b:"1924-2023, modèle de Solow (1956). Rendements décroissants du capital, le progrès technique (résidu) est exogène."},
+{c:"E1",t:"aut",f:"Joseph Schumpeter",b:"1883-1950, Capitalisme, socialisme et démocratie (1942). Destruction créatrice : l'innovation détruit les activités obsolètes."},
+{c:"E1",t:"aut",f:"Paul Romer",b:"Nobel 2018. Croissance endogène : le progrès technique résulte de décisions économiques (R&D, éducation)."},
+{c:"E1",t:"aut",f:"Philippe Aghion",b:"Le pouvoir de la destruction créatrice (2020). Modèle néo-schumpetérien : la concurrence stimule l'innovation."},
+{c:"E1",t:"aut",f:"Acemoglu & Robinson",b:"Why Nations Fail (2012). Les institutions inclusives sont la condition durable de la croissance."},
+{c:"E1",t:"mec",f:"Rendements décroissants du capital",b:"À travail constant, chaque unité supplémentaire de capital apporte moins de production. Sans progrès technique, la croissance s'épuise."},
+{c:"E1",t:"mec",f:"Destruction créatrice",b:"Mécanisme par lequel l'innovation détruit des emplois/firmes anciens et en crée de nouveaux. Tension chômage transitoire/croissance long terme."},
+{c:"E1",t:"mec",f:"Croissance endogène",b:"Le PT résulte d'investissements en R&D, éducation, infrastructures (capital public). Politique publique → croissance."},
+{c:"E1",t:"chf",f:"PIB France 2024",b:"≈ 2 822 Md€ courants (Insee)."},
+{c:"E1",t:"chf",f:"PIB volume France vs Allemagne 2019-2024",b:"+4,3 % France vs +0,3 % Allemagne (Insee 2025)."},
+{c:"E1",t:"chf",f:"Productivité française depuis 2019",b:"En recul de ~7 % (France Stratégie). [À vérifier]"},
+{c:"E1",t:"chf",f:"Émissions GES France 2023",b:"≈ 393 Mt CO₂eq, soit -20 % vs 1990 (CITEPA)."},
+{c:"E1",t:"cit",f:"Citation Schumpeter sur le marché",b:"« Le marché concurrentiel n'est pas un état mais un processus »."},
+{c:"E1",t:"cit",f:"Citation Daly sur la croissance",b:"« La croissance est devenue plus chère que les bénéfices qu'elle apporte. »"},
+{c:"E1",t:"cnc",f:"4 types de capital qui produisent du progrès technique",b:"Physique, humain (Becker), technologique (R&D, brevets), public (infrastructures, recherche)."},
+{c:"E1",t:"cnc",f:"PIB ≠ bien-être : indicateurs alternatifs",b:"IDH (Sen), BIP40, empreinte écologique, IPV (indicateur de progrès véritable)."},
+{c:"E1",t:"cnc",f:"Internaliser une externalité",b:"Faire en sorte que le coût/bénéfice externe soit pris en compte par l'agent (taxe Pigou, marché Coase, normes)."},
+{c:"E1",t:"exp",f:"Exemple Trente Glorieuses",b:"1945-1973 : ~5%/an en France grâce au progrès technique (rattrapage technologique sur les USA)."},
+{c:"E1",t:"exp",f:"Exemple smartphone",b:"Innovation de produit + procédé : combine capital humain (ingénieurs), technologique (brevets), CVM (composants Asie)."},
+{c:"E1",t:"cnc",f:"Croissance verte vs décroissance",b:"Verte (Stern, Nordhaus) : découplage par innovation. Décroissance (Latouche, Jackson) : sortir de l'imaginaire de croissance."},
+{c:"E1",t:"cnc",f:"Théorie du donut (Raworth)",b:"Prospérité humaine entre un plancher social et un plafond écologique."},
+{c:"E1",t:"cnc",f:"Externalité positive R&D",b:"Justifie le soutien public (CIR en France, programmes européens type Horizon)."},
+
+/* === E2 Crises financières (30) — oral 2026 === */
+{c:"E2",t:"def",f:"Crise financière",b:"Effondrement brutal des marchés financiers : chute des cours, faillites bancaires, panique."},
+{c:"E2",t:"def",f:"Bulle spéculative",b:"Prix d'un actif très au-dessus de sa valeur fondamentale, alimenté par les anticipations de hausse."},
+{c:"E2",t:"def",f:"Risque systémique",b:"Risque que la défaillance d'un acteur entraîne la défaillance des autres par effet domino."},
+{c:"E2",t:"def",f:"Aléa moral",b:"Comportement de prise de risque excessive parce qu'on est assuré ou pense l'être (banques too big to fail)."},
+{c:"E2",t:"def",f:"Sélection adverse",b:"Quand l'asymétrie d'information ex ante conduit à n'attirer que les plus risqués (Akerlof, marché des lemons)."},
+{c:"E2",t:"def",f:"Bank run",b:"Panique bancaire : les déposants retirent massivement leurs fonds, fragilisant la banque par illiquidité."},
+{c:"E2",t:"def",f:"Effet de levier",b:"Endettement permettant de spéculer avec plus de capital qu'on ne possède ; amplifie pertes et gains."},
+{c:"E2",t:"def",f:"Titrisation",b:"Transformation de créances (ex. prêts immobiliers) en titres négociables sur les marchés."},
+{c:"E2",t:"aut",f:"Hyman Minsky",b:"1919-1996. Hypothèse d'instabilité financière : la stabilité est déstabilisante. 3 régimes : hedge → spéculatif → Ponzi."},
+{c:"E2",t:"aut",f:"Charles Kindleberger",b:"Manias, Panics, and Crashes. Toutes les crises suivent le même schéma depuis 1637 (tulipomanie)."},
+{c:"E2",t:"aut",f:"Irving Fisher",b:"Theory of debt-deflation (1933) : crise = surendettement → ventes forcées → déflation → dette réelle augmente."},
+{c:"E2",t:"aut",f:"Reinhart & Rogoff",b:"This Time Is Different (2009) : 800 ans de crises, mêmes patterns récurrents."},
+{c:"E2",t:"aut",f:"Joseph Stiglitz",b:"Nobel 2001. Asymétries d'information au cœur des défaillances de marché financier."},
+{c:"E2",t:"mec",f:"Mécanisme d'une bulle",b:"1) Choc favorable. 2) Crédit facile. 3) Mimétisme, hausse des prix. 4) Retournement. 5) Panique. 6) Contagion."},
+{c:"E2",t:"mec",f:"Canal du crédit en crise",b:"Banques fragilisées → crédit raréfié → entreprises et ménages réduisent investissement et consommation."},
+{c:"E2",t:"mec",f:"Effet de richesse négatif",b:"Chute des actifs (immobilier, actions) → ménages se sentent appauvris → moins de consommation."},
+{c:"E2",t:"mec",f:"Prophétie auto-réalisatrice",b:"Croire qu'une banque va faire faillite déclenche le bank run qui la fait effectivement faillir."},
+{c:"E2",t:"chf",f:"Tier 1 banques européennes post-Bâle III",b:"≈14 % en moyenne (vs ~7 % en 2008). [À vérifier]"},
+{c:"E2",t:"chf",f:"Shadow banking en part du crédit mondial",b:"≈ 50 % (FSB). [À vérifier]"},
+{c:"E2",t:"exp",f:"Crise des subprimes 2008",b:"Prêts immobiliers à ménages peu solvables (USA), titrisés en MBS, propagés mondialement. Lehman 15 sept. 2008."},
+{c:"E2",t:"exp",f:"Crise des dettes souveraines 2010-2012",b:"Grèce, Irlande, Portugal, Espagne, Italie. Réponse : MES + OMT (Draghi 2012)."},
+{c:"E2",t:"exp",f:"SVB & Credit Suisse 2023",b:"Faillites éclair montrant les fragilités persistantes malgré Bâle III."},
+{c:"E2",t:"cnc",f:"Bâle III",b:"Accords prudentiels post-2008 : ratios de fonds propres, ratio de liquidité (LCR/NSFR), stress tests."},
+{c:"E2",t:"cnc",f:"Macroprudentiel vs microprudentiel",b:"Macro : surveillance du risque systémique (BCE, FSB). Micro : santé individuelle des banques."},
+{c:"E2",t:"cnc",f:"Prêteur en dernier ressort",b:"Banque centrale prêtant aux banques solvables mais illiquides en cas de panique (Bagehot, 1873)."},
+{c:"E2",t:"cnc",f:"Glass-Steagall (loi française 2013)",b:"Séparation banque de dépôt / banque d'investissement, pour éviter contagion."},
+{c:"E2",t:"cnc",f:"Comportement mimétique (Keynes)",b:"« Concours de beauté » : on ne mise pas sur la valeur fondamentale mais sur ce que les autres jugeront beau."},
+{c:"E2",t:"cit",f:"Citation Keynes (attribuée)",b:"« Le marché peut rester irrationnel plus longtemps que vous ne pouvez rester solvable. »"},
+{c:"E2",t:"cit",f:"Citation Draghi 2012",b:"« Whatever it takes » — engagement à préserver l'euro, marqueur de l'OMT."},
+{c:"E2",t:"cnc",f:"Limites de Bâle III",b:"Shadow banking échappe, arbitrage réglementaire, fonds propres encore jugés insuffisants (Admati & Hellwig)."},
+
+/* === E3 Chômage (30) === */
+{c:"E3",t:"def",f:"Chômeur (BIT)",b:"Sans emploi, disponible pour travailler, recherche active d'un emploi (les 3 conditions cumulatives)."},
+{c:"E3",t:"def",f:"Taux de chômage",b:"Nb chômeurs / population active × 100."},
+{c:"E3",t:"def",f:"Population active",b:"Actifs occupés + chômeurs."},
+{c:"E3",t:"def",f:"Halo du chômage",b:"Personnes inactives au sens BIT mais souhaitant travailler (≈1,9 M en France)."},
+{c:"E3",t:"def",f:"Sous-emploi",b:"Temps partiel subi + chômage technique. À distinguer du chômage."},
+{c:"E3",t:"def",f:"NAIRU",b:"Non-Accelerating Inflation Rate of Unemployment : taux de chômage qui n'accélère pas l'inflation."},
+{c:"E3",t:"def",f:"Salaire de réservation",b:"Salaire en dessous duquel un actif refuse de travailler."},
+{c:"E3",t:"def",f:"Flexisécurité",b:"Combinaison de flexibilité d'embauche/licenciement et de forte protection des chômeurs (modèle danois)."},
+{c:"E3",t:"aut",f:"Keynes — chômage involontaire",b:"1883-1946, Théorie générale (1936). Le chômage vient d'une demande effective insuffisante."},
+{c:"E3",t:"aut",f:"Phillips",b:"1958. Relation inverse chômage/inflation observée empiriquement (Royaume-Uni 1861-1957)."},
+{c:"E3",t:"aut",f:"Friedman & Phelps",b:"Années 1960-70 : taux de chômage naturel, NAIRU. La courbe de Phillips est verticale à long terme."},
+{c:"E3",t:"aut",f:"Akerlof, Yellen, Shapiro-Stiglitz",b:"Salaire d'efficience : payer au-dessus du marché augmente la productivité (incitation, moindre rotation)."},
+{c:"E3",t:"aut",f:"Diamond, Mortensen, Pissarides",b:"Nobel 2010. Modèle d'appariement : le chômage existe car la rencontre offre/demande coûte du temps."},
+{c:"E3",t:"aut",f:"Blanchard & Summers",b:"Hystérèse (1986) : un chômage durable devient structurel (perte de capital humain, découragement)."},
+{c:"E3",t:"aut",f:"Lindbeck & Snower",b:"Théorie insiders/outsiders : insiders (CDI) protègent leur poste, outsiders restent dehors."},
+{c:"E3",t:"mec",f:"Chômage classique",b:"Salaire réel > productivité marginale → demande de travail < offre. Solution : baisser le coût du travail."},
+{c:"E3",t:"mec",f:"Chômage keynésien",b:"Demande globale insuffisante → entreprises produisent moins → embauchent moins. Solution : relance."},
+{c:"E3",t:"mec",f:"Loi d'Okun",b:"Relation empirique : il faut ~2 % de croissance supplémentaire pour faire baisser le chômage de 1 point."},
+{c:"E3",t:"chf",f:"Taux de chômage France T4 2025",b:"≈ 7,9 % (Insee), au plus haut depuis 2021."},
+{c:"E3",t:"chf",f:"Taux de chômage France 2024 (moyenne)",b:"≈ 7,4 %."},
+{c:"E3",t:"chf",f:"Taux de chômage UE 2024",b:"≈ 5,9 %."},
+{c:"E3",t:"chf",f:"Chômage non-diplômés vs supérieur",b:"13,8 % chez non-diplômés vs 5,0 % chez diplômés du supérieur."},
+{c:"E3",t:"chf",f:"Chômage longue durée",b:"≈ 30 % des chômeurs en France (>1 an)."},
+{c:"E3",t:"exp",f:"Réforme assurance-chômage 2023",b:"Modulation de la durée d'indemnisation selon la conjoncture (logique flexicurité)."},
+{c:"E3",t:"exp",f:"Ordonnances Travail 2017",b:"Plafonnement indemnités prud'homales, fusion CSE, négociation décentralisée."},
+{c:"E3",t:"cnc",f:"Politiques actives vs passives",b:"Actives : formation, accompagnement, contrats aidés. Passives : indemnisation."},
+{c:"E3",t:"cnc",f:"Coin fiscalo-social",b:"Écart entre coût du travail pour l'employeur et salaire net du salarié. France : élevé."},
+{c:"E3",t:"cnc",f:"Frey & Osborne 2013",b:"Estimation que 47 % des emplois US sont automatisables — chiffre depuis nuancé par Acemoglu."},
+{c:"E3",t:"cit",f:"Paradoxe France emplois non pourvus",b:"~400 000 emplois non pourvus + 2,3 M chômeurs : problème = appariement, pas pénurie. [À vérifier]"},
+{c:"E3",t:"cnc",f:"Modèle nordique de flexicurité",b:"Danemark : facilité licencier + indemnités élevées + formation continue. Chômage ~5 %."},
+
+/* === E4 Commerce international (30) === */
+{c:"E4",t:"def",f:"Avantage absolu (Smith)",b:"Capacité à produire un bien à coût moindre que les autres pays."},
+{c:"E4",t:"def",f:"Avantage comparatif (Ricardo)",b:"Capacité à produire un bien avec un coût d'opportunité moindre. Permet le gain à l'échange même sans avantage absolu."},
+{c:"E4",t:"def",f:"FMN",b:"Firme multinationale : possède au moins une filiale à l'étranger."},
+{c:"E4",t:"def",f:"IDE",b:"Investissement direct à l'étranger : prise de contrôle (≥10 %) d'une entreprise étrangère."},
+{c:"E4",t:"def",f:"CMV / CVM",b:"Chaîne mondiale de valeur : fragmentation internationale du processus productif."},
+{c:"E4",t:"def",f:"Commerce intra-branche",b:"Échanges de produits similaires entre pays similaires (France ↔ Allemagne, automobile)."},
+{c:"E4",t:"def",f:"Compétitivité-prix vs hors-prix",b:"Prix : prix bas. Hors-prix : qualité, innovation, marque, design."},
+{c:"E4",t:"def",f:"Dumping",b:"Vendre à perte/sous le coût de production pour gagner des parts de marché."},
+{c:"E4",t:"def",f:"Balance commerciale",b:"Solde exportations - importations de biens (et services pour la balance des transactions courantes)."},
+{c:"E4",t:"aut",f:"David Ricardo",b:"1772-1823, Principes d'économie politique (1817). Avantages comparatifs."},
+{c:"E4",t:"aut",f:"Heckscher-Ohlin-Samuelson",b:"Théorème HOS : un pays exporte les biens utilisant intensivement le facteur dont il est richement doté."},
+{c:"E4",t:"aut",f:"Paul Krugman",b:"Nobel 2008. Nouvelle théorie du commerce international (1979-1980) : économies d'échelle, concurrence monopolistique."},
+{c:"E4",t:"aut",f:"Marc Melitz",b:"Modèle de firmes hétérogènes (2003) : seules les plus productives exportent."},
+{c:"E4",t:"aut",f:"Friedrich List",b:"1841. Argument de l'industrie naissante : protectionnisme éducateur temporaire."},
+{c:"E4",t:"aut",f:"Dani Rodrik",b:"Trilemme de la mondialisation : intégration profonde × souveraineté × démocratie = max 2/3."},
+{c:"E4",t:"mec",f:"Stolper-Samuelson",b:"Le commerce international tend à diminuer la rémunération du facteur abondant chez les concurrents (creuse les inégalités au Nord)."},
+{c:"E4",t:"mec",f:"Économies d'échelle (Krugman)",b:"Coûts unitaires diminuent avec la taille → différenciation et concurrence monopolistique entre pays similaires."},
+{c:"E4",t:"chf",f:"Commerce mondial / PIB",b:"≈ 33 % (stagnation depuis 2008 — slowbalisation)."},
+{c:"E4",t:"chf",f:"Déficit commercial France 2024",b:"≈ 81 Md€. [À vérifier]"},
+{c:"E4",t:"chf",f:"FMN poids dans l'économie mondiale",b:"≈ 1/3 du PIB mondial, ~1/2 du commerce mondial (CNUCED)."},
+{c:"E4",t:"chf",f:"Profits FMN en paradis fiscaux (Zucman)",b:"≈ 40 %. [À vérifier]"},
+{c:"E4",t:"exp",f:"Apple iPhone (CMV)",b:"Design Californie, brevets US, composants Asie, assemblage Chine. Apple capte la VA design/marque."},
+{c:"E4",t:"exp",f:"China Shock (Autor-Dorn-Hanson)",b:"Concurrence chinoise a détruit ~2 M d'emplois industriels US (2000-2015)."},
+{c:"E4",t:"exp",f:"Inflation Reduction Act (IRA, 2022)",b:"USA : 369 Md$ pour transition + protectionnisme vert. [À vérifier]"},
+{c:"E4",t:"exp",f:"Tarifs Trump 2.0 (2025)",b:"Hausse massive des droits de douane, contestation de l'OMC, friend-shoring."},
+{c:"E4",t:"cnc",f:"Slowbalisation",b:"Ralentissement de la mondialisation depuis 2008 : commerce/PIB stagne, IDE en baisse."},
+{c:"E4",t:"cnc",f:"Friend-shoring (Yellen)",b:"Relocaliser les chaînes de production chez des pays alliés politiquement."},
+{c:"E4",t:"cnc",f:"Courbe de l'éléphant (Milanovic)",b:"Mondialisation : enrichit les classes moyennes émergentes ↑ et les 1 % mondiaux ↑, paupérise les classes moyennes occidentales →."},
+{c:"E4",t:"cit",f:"Citation Schmitt (paraphrase)",b:"« Le commerce international est une politique étrangère menée par d'autres moyens. »"},
+{c:"E4",t:"cnc",f:"3 arguments protectionnistes légitimes",b:"Industrie naissante (List), stratégique (santé, défense), social/environnemental (anti-dumping)."},
+
+/* === E5 Politiques économiques européennes (30) === */
+{c:"E5",t:"def",f:"Marché unique",b:"Espace de libre circulation des biens, services, capitaux et personnes (Acte unique 1986, achevé 1993)."},
+{c:"E5",t:"def",f:"Zone euro",b:"Monnaie unique adoptée en 1999 (pièces/billets 2002), gérée par la BCE. 20 États membres."},
+{c:"E5",t:"def",f:"Politique monétaire",b:"Action sur la masse monétaire et les taux d'intérêt pour atteindre des objectifs (inflation, activité)."},
+{c:"E5",t:"def",f:"Politique budgétaire",b:"Action sur les recettes et dépenses publiques pour atteindre des objectifs économiques."},
+{c:"E5",t:"def",f:"Policy-mix",b:"Combinaison cohérente de politique monétaire et de politique budgétaire."},
+{c:"E5",t:"def",f:"Critères de Maastricht",b:"Déficit < 3 % PIB, dette < 60 % PIB, inflation et taux modérés."},
+{c:"E5",t:"def",f:"Pacte de stabilité et de croissance (PSC, 1997)",b:"Cadre disciplinaire de surveillance des finances publiques des États membres."},
+{c:"E5",t:"def",f:"QE (Quantitative Easing)",b:"Politique monétaire non conventionnelle : achat massif d'actifs par la banque centrale pour injecter de la liquidité."},
+{c:"E5",t:"def",f:"MES",b:"Mécanisme européen de stabilité : fonds de sauvetage pour États en difficulté (créé 2012)."},
+{c:"E5",t:"def",f:"Semestre européen",b:"Cycle annuel de coordination des politiques économiques, budgétaires et structurelles des États membres."},
+{c:"E5",t:"aut",f:"Robert Mundell",b:"Nobel 1999. Théorie de la zone monétaire optimale (ZMO, 1961) : 4 critères dont mobilité du travail."},
+{c:"E5",t:"aut",f:"Jan Tinbergen",b:"Nobel 1969. Règle des instruments : il faut autant d'instruments que d'objectifs indépendants."},
+{c:"E5",t:"aut",f:"Michel Aglietta",b:"L'euro est une monnaie sans État. Critique de l'intégration monétaire sans intégration budgétaire."},
+{c:"E5",t:"mec",f:"Transmission politique monétaire",b:"Taux directeur ↓ → taux de marché ↓ → crédit ↑ → demande ↑ → activité ↑ et inflation ↑."},
+{c:"E5",t:"mec",f:"Effet d'éviction",b:"Une relance budgétaire peut faire monter les taux et évincer l'investissement privé (limite des classiques)."},
+{c:"E5",t:"mec",f:"Effet multiplicateur (Keynes)",b:"Une dépense publique se diffuse en consommation → emplois → consommation, multipliant l'effet initial."},
+{c:"E5",t:"chf",f:"Pic d'inflation zone euro",b:"10,6 % en octobre 2022 (Eurostat)."},
+{c:"E5",t:"chf",f:"Taux directeur BCE pic 2023",b:"≈ 4 % (taux de dépôt) face à l'inflation."},
+{c:"E5",t:"chf",f:"NextGenerationEU",b:"Plan de relance post-Covid : 750 Md€ (390 subventions + 360 prêts)."},
+{c:"E5",t:"chf",f:"Déficit France 2024",b:"≈ 5,8 % du PIB. Dette > 110 % du PIB. [À vérifier]"},
+{c:"E5",t:"chf",f:"Cible BCE",b:"Inflation à 2 % à moyen terme (objectif symétrique depuis 2021)."},
+{c:"E5",t:"exp",f:"OMT 2012",b:"Outright Monetary Transactions : programme BCE permettant achat illimité de dette souveraine sous conditionnalité."},
+{c:"E5",t:"exp",f:"Crise grecque 2010-2018",b:"3 plans d'aide, austérité sévère, contraction du PIB de ~25 %. Préservation de la zone euro."},
+{c:"E5",t:"exp",f:"Réforme PSC 2024",b:"Trajectoires budgétaires individualisées, plus de souplesse mais surveillance renforcée."},
+{c:"E5",t:"cnc",f:"4 critères ZMO (Mundell)",b:"Mobilité du travail, flexibilité des prix/salaires, transferts budgétaires fédéraux, intégration commerciale."},
+{c:"E5",t:"cnc",f:"Chocs asymétriques",b:"Choc affectant un seul ou quelques pays — un même taux d'intérêt unique est inadapté."},
+{c:"E5",t:"cnc",f:"Indépendance de la BCE",b:"Inscrite dans les traités. Mandat principal : stabilité des prix. Pas de financement direct des États (art. 123 TFUE)."},
+{c:"E5",t:"cit",f:"Citation Draghi 2012",b:"« Whatever it takes »."},
+{c:"E5",t:"cit",f:"Citation Aglietta",b:"« L'euro est une monnaie sans État, l'État est sans monnaie. »"},
+{c:"E5",t:"cnc",f:"Eurobonds / dette commune",b:"NextGenEU = 1ère émission de dette commune significative — précédent fort vers union budgétaire."},
+
+/* === S1 Structure sociale (30) === */
+{c:"S1",t:"def",f:"Classe sociale",b:"Grand groupe partageant une position similaire dans la société (économie, statut, pouvoir)."},
+{c:"S1",t:"def",f:"PCS",b:"Professions et Catégories Socioprofessionnelles (Insee). 6 grandes catégories d'actifs."},
+{c:"S1",t:"def",f:"Stratification sociale",b:"Organisation hiérarchisée de la société en groupes inégaux."},
+{c:"S1",t:"def",f:"Habitus (Bourdieu)",b:"Système de dispositions intériorisées qui orientent pratiques et goûts selon la position sociale."},
+{c:"S1",t:"def",f:"Capital culturel",b:"Bourdieu : ressources culturelles. 3 formes : incorporé (savoirs), objectivé (livres, œuvres), institutionnalisé (diplômes)."},
+{c:"S1",t:"def",f:"Capital social (Bourdieu)",b:"Ensemble des ressources tirées d'un réseau de relations."},
+{c:"S1",t:"def",f:"Moyennisation",b:"Thèse de H. Mendras (1988) : la société française devient majoritairement classes moyennes."},
+{c:"S1",t:"def",f:"Individualisation",b:"Affaiblissement des cadres collectifs (classe, religion, famille élargie) au profit des choix individuels (Beck, Singly)."},
+{c:"S1",t:"def",f:"Intersectionnalité",b:"Crenshaw : analyse combinée des dominations (classe + genre + race + ...)."},
+{c:"S1",t:"aut",f:"Karl Marx",b:"1818-1883. Classes en soi/pour soi, conflit central capital-travail."},
+{c:"S1",t:"aut",f:"Max Weber",b:"1864-1920. 3 dimensions de la stratification : économique (classe), social (statut), politique (parti)."},
+{c:"S1",t:"aut",f:"Pierre Bourdieu",b:"1930-2002, La Distinction (1979). Espace social, 3 capitaux, habitus."},
+{c:"S1",t:"aut",f:"Louis Chauvel",b:"Société du déclassement, fragilité des classes moyennes."},
+{c:"S1",t:"aut",f:"Camille Peugny",b:"Le déclassement, mobilité descendante intergénérationnelle."},
+{c:"S1",t:"aut",f:"Thomas Piketty",b:"Le Capital au XXIe siècle (2013). r > g : la rente du capital tend à croître plus vite que le revenu."},
+{c:"S1",t:"aut",f:"Stéphane Beaud & Michel Pialoux",b:"Retour sur la condition ouvrière (1999). Classe ouvrière invisibilisée mais persistante."},
+{c:"S1",t:"aut",f:"Henri Mendras",b:"La Seconde Révolution française (1988). Thèse de la moyennisation."},
+{c:"S1",t:"chf",f:"Cadres en France 2024",b:"≈ 22 % des actifs (vs 8 % en 1982)."},
+{c:"S1",t:"chf",f:"Ouvriers en France 2024",b:"≈ 19 % des actifs (vs 35 % en 1982)."},
+{c:"S1",t:"chf",f:"Salarisation",b:"≈ 89 % des actifs occupés sont salariés."},
+{c:"S1",t:"chf",f:"Tertiarisation",b:"≈ 80 % des emplois dans les services."},
+{c:"S1",t:"chf",f:"Rapport interdécile D9/D1",b:"≈ 3,5 (niveau de vie après redistribution, France)."},
+{c:"S1",t:"chf",f:"Patrimoine top 10 %",b:"~50 % du patrimoine total (France, Insee)."},
+{c:"S1",t:"chf",f:"Reproduction sociale (cadres)",b:"~1/2 des enfants de cadres deviennent cadres ; ~1/10 chez les ouvriers."},
+{c:"S1",t:"cnc",f:"Classe en soi vs pour soi (Marx)",b:"En soi : groupe partageant des conditions objectives. Pour soi : conscience de classe + organisation politique."},
+{c:"S1",t:"cnc",f:"3 dimensions Weber",b:"Classe (économique), Stand/groupe de statut (prestige), Parti (pouvoir)."},
+{c:"S1",t:"cnc",f:"Sécession des élites (Lasch, Guilluy)",b:"Entre-soi géographique des CSP+ dans les métropoles."},
+{c:"S1",t:"cit",f:"Citation Bourdieu",b:"« Le goût classe et classe celui qui classe. »"},
+{c:"S1",t:"cit",f:"Synthèse Beaud",b:"« La classe sociale est partout, mais elle ne dit plus son nom. »"},
+{c:"S1",t:"cnc",f:"Multidimensionnalité Weber",b:"Une position élevée dans une dimension peut compenser une position basse dans une autre (intellectuel pauvre = capital culturel élevé)."},
+
+/* === S2 École (30) — oral 2026 === */
+{c:"S2",t:"def",f:"Massification scolaire",b:"Augmentation du nombre absolu d'élèves accédant à un niveau (ex. 80 % d'une génération au bac)."},
+{c:"S2",t:"def",f:"Démocratisation",b:"Égalisation des chances de réussite entre origines sociales — différente de la massification."},
+{c:"S2",t:"def",f:"Démocratisation ségrégative (Merle)",b:"L'égalité progresse au bas de l'échelle scolaire mais pas au sommet (CPGE, grandes écoles)."},
+{c:"S2",t:"def",f:"Capital culturel hérité",b:"Ressources culturelles transmises par la famille avant l'école (livres, langage, sorties)."},
+{c:"S2",t:"def",f:"Violence symbolique",b:"Bourdieu : domination acceptée parce qu'intériorisée comme légitime (« je ne suis pas fait pour ça »)."},
+{c:"S2",t:"def",f:"Paradoxe d'Anderson (1961)",b:"Dans une société à diplômes en hausse, un même diplôme vaut moins → mobilité ne progresse pas malgré la massification."},
+{c:"S2",t:"def",f:"Carte scolaire",b:"Affectation des élèves selon le lieu de résidence ; détournée par stratégies parentales (van Zanten)."},
+{c:"S2",t:"aut",f:"Bourdieu & Passeron",b:"Les Héritiers (1964), La Reproduction (1970). L'école valorise le capital culturel des classes supérieures."},
+{c:"S2",t:"aut",f:"Raymond Boudon",b:"L'Inégalité des chances (1973). Choix rationnels à chaque palier d'orientation expliquent les inégalités."},
+{c:"S2",t:"aut",f:"Pierre Merle",b:"Démocratisation ségrégative. Mesure les inégalités d'accès aux filières d'élite."},
+{c:"S2",t:"aut",f:"Marie Duru-Bellat",b:"L'inflation scolaire. La course au diplôme dévalorise les diplômes les moins rares."},
+{c:"S2",t:"aut",f:"Agnès van Zanten",b:"Stratégies parentales des CSP+ (carte scolaire, options rares, privé)."},
+{c:"S2",t:"aut",f:"Stéphane Beaud",b:"80 % au bac... et après ? Pour les enfants de classes populaires, le bac peut être un piège."},
+{c:"S2",t:"aut",f:"François Dubet",b:"Le mérite est un idéal nécessaire mais ne suffit pas si la position de départ est inégale."},
+{c:"S2",t:"aut",f:"Michael Sandel",b:"The Tyranny of Merit. La méritocratie nourrit l'arrogance des gagnants et l'humiliation des perdants."},
+{c:"S2",t:"chf",f:"Bac : génération",b:"≈ 80 % d'une génération obtient le bac (vs 5 % en 1950)."},
+{c:"S2",t:"chf",f:"Études supérieures France",b:"≈ 51 % d'une génération (DEPP)."},
+{c:"S2",t:"chf",f:"Master à 30 ans selon origine",b:"53 % des enfants de cadres titulaires d'un master à 30 ans vs 12 % des enfants d'ouvriers (DEPP/Insee)."},
+{c:"S2",t:"chf",f:"PISA 2022 — écart France",b:"Écart en maths favorisé/défavorisé : 113 points France vs 86 OCDE."},
+{c:"S2",t:"chf",f:"Top grandes écoles",b:"~70 % issus de CSP+ (Pierre Merle). [À vérifier]"},
+{c:"S2",t:"mec",f:"Reproduction culturelle",b:"École valorise capital culturel hérité → enfants CSP+ avantagés → leur réussite paraît méritée → légitimation."},
+{c:"S2",t:"mec",f:"Logique des choix (Boudon)",b:"À chaque palier (3e, terminale), les familles modestes choisissent rationnellement des filières plus courtes/sûres."},
+{c:"S2",t:"cnc",f:"Effet d'établissement",b:"Une même note ne signifie pas la même chose selon l'établissement (mixité, pression scolaire, attentes)."},
+{c:"S2",t:"cnc",f:"Inflation scolaire (Duru-Bellat)",b:"Plus on diplôme, moins le diplôme est rare et donc valorisé sur le marché du travail."},
+{c:"S2",t:"cnc",f:"Discriminations positives",b:"CEP Sciences Po (2001), cordées de la réussite, Parcoursup taux boursiers, parité dans les classes prépa."},
+{c:"S2",t:"cnc",f:"Modèle finlandais",b:"Pas de redoublement, formation poussée des profs, équité forte. Souvent en haut PISA."},
+{c:"S2",t:"cnc",f:"Sociabilités scolaires (van Zanten)",b:"L'école est aussi un lieu de socialisation entre pairs, qui peut renforcer/atténuer la reproduction."},
+{c:"S2",t:"cit",f:"Citation Bourdieu (synthèse)",b:"« L'école rend légitimes des inégalités qu'elle ne crée pas mais qu'elle ne combat pas. »"},
+{c:"S2",t:"cit",f:"Citation Sandel",b:"« Plus la société est méritocratique, plus l'humiliation des perdants est cruelle. »"},
+{c:"S2",t:"cnc",f:"École et destins individuels",b:"Élévation du diplôme = protection contre chômage, mais ne garantit plus l'ascension sociale."},
+
+/* === S3 Mobilité sociale (30) === */
+{c:"S3",t:"def",f:"Mobilité sociale",b:"Changement de position sociale, intergénérationnel ou intragénérationnel."},
+{c:"S3",t:"def",f:"Mobilité intergénérationnelle",b:"Position d'arrivée comparée à celle des parents (généralement le père dans les tables historiques)."},
+{c:"S3",t:"def",f:"Mobilité intragénérationnelle",b:"Évolution de la position au cours d'une même vie."},
+{c:"S3",t:"def",f:"Mobilité ascendante / descendante",b:"Élévation par rapport à l'origine / déclassement par rapport à l'origine."},
+{c:"S3",t:"def",f:"Mobilité observée",b:"% d'individus dont la PCS diffère de celle de leur père."},
+{c:"S3",t:"def",f:"Mobilité structurelle",b:"Mobilité due au changement de la structure des emplois (moins d'ouvriers, plus de cadres)."},
+{c:"S3",t:"def",f:"Mobilité nette",b:"Mobilité observée - mobilité structurelle = mobilité « pure »."},
+{c:"S3",t:"def",f:"Fluidité sociale",b:"Indépendance entre origine et destinée à structure constante. Mesure l'égalité des chances réelle."},
+{c:"S3",t:"def",f:"Reproduction sociale",b:"Tendance à occuper la même position que ses parents."},
+{c:"S3",t:"def",f:"Déclassement",b:"Position inférieure à celle des parents (objectif), au diplôme (scolaire) ou ressenti (subjectif)."},
+{c:"S3",t:"def",f:"Contre-mobilité",b:"Trajectoire en U : l'individu retrouve à terme la position de ses parents après l'avoir quittée."},
+{c:"S3",t:"def",f:"Homogamie",b:"Mariage dans son propre milieu social — facteur de reproduction."},
+{c:"S3",t:"aut",f:"Pitirim Sorokin",b:"1927, fondateur de l'analyse de la mobilité sociale."},
+{c:"S3",t:"aut",f:"Goldthorpe & Erikson",b:"The Constant Flux (1992). Schéma EGP, distinction mobilité absolue/relative, hypothèse FJH."},
+{c:"S3",t:"aut",f:"Louis-André Vallet",b:"Spécialiste français de la fluidité sociale (Insee). Fluidité légère hausse 1970-80, puis stagne."},
+{c:"S3",t:"aut",f:"Camille Peugny",b:"Le déclassement (2009). Hausse de la mobilité descendante intergénérationnelle."},
+{c:"S3",t:"aut",f:"Raj Chetty",b:"Économiste américain, mobilité de revenus par génération. Probabilité quintile bas → quintile haut faible (~9 % France)."},
+{c:"S3",t:"aut",f:"Daniel Bertaux",b:"Approche par récits de vie de la mobilité sociale (sociologie qualitative)."},
+{c:"S3",t:"chf",f:"Mobilité observée hommes France",b:"≈ 65 % des hommes 35-59 ans ont une PCS différente du père (Insee FQP)."},
+{c:"S3",t:"chf",f:"Reproduction cadres",b:"≈ 23 % des fils de cadres deviennent cadres."},
+{c:"S3",t:"chf",f:"Reproduction ouvriers",b:"≈ 10 % des fils d'ouvriers deviennent cadres."},
+{c:"S3",t:"chf",f:"Corrélation revenus parents/enfants",b:"≈ 0,4 en France (Chetty)."},
+{c:"S3",t:"chf",f:"Probabilité quintile bas → haut",b:"≈ 9 % en France."},
+{c:"S3",t:"mec",f:"Hypothèse FJH",b:"Featherman-Jones-Hauser : la fluidité sociale relative varie peu entre pays développés."},
+{c:"S3",t:"mec",f:"Courbe de Gatsby",b:"Krueger : plus un pays est inégalitaire, moins la mobilité est forte."},
+{c:"S3",t:"mec",f:"Lecture table de mobilité",b:"Ligne = origine (PCS père). Colonne = destinée (PCS fils). Diagonale = reproduction."},
+{c:"S3",t:"cnc",f:"Tables de destinée vs recrutement",b:"Destinée : pour 100 fils d'ouvriers, X deviennent cadres. Recrutement : pour 100 cadres, X sont fils d'ouvriers."},
+{c:"S3",t:"cnc",f:"Ascenseur social en panne ?",b:"Mobilité ascendante absolue ralentit (effet structurel) ; mobilité descendante augmente."},
+{c:"S3",t:"cnc",f:"Mobilité féminine",b:"Tables historiquement masculines. Mobilité féminine via diplômes, mais plafond de verre."},
+{c:"S3",t:"cit",f:"Synthèse Peugny",b:"« On monte, mais beaucoup moins haut qu'on croit. »"},
+
+/* === S4 Mutations travail (30) === */
+{c:"S4",t:"def",f:"Travail (sociologie)",b:"Activité humaine produisant des biens/services, transformant la nature et les rapports sociaux."},
+{c:"S4",t:"def",f:"Emploi",b:"Travail rémunéré et encadré juridiquement (contrat, statut, droits sociaux)."},
+{c:"S4",t:"def",f:"Salarisation",b:"Augmentation de la part des salariés dans l'emploi total (≈89 % en France)."},
+{c:"S4",t:"def",f:"Tertiarisation",b:"Déplacement de l'emploi vers les services (≈80 % en France)."},
+{c:"S4",t:"def",f:"Précarisation",b:"Hausse des formes d'emploi atypiques, instables, sous-protégées (CDD, intérim, temps partiel subi)."},
+{c:"S4",t:"def",f:"Polarisation des emplois",b:"Goos & Manning : automatisation détruit les emplois routiniers de milieu, polarise très qualifié / peu qualifié."},
+{c:"S4",t:"def",f:"Désaffiliation (Castel)",b:"Processus par lequel un individu perd ses supports d'intégration (emploi stable, liens sociaux)."},
+{c:"S4",t:"def",f:"Ubérisation",b:"Recours à des plateformes numériques pour mettre en relation prestataires indépendants et clients (Uber, Deliveroo)."},
+{c:"S4",t:"def",f:"Quiet quitting",b:"Désengagement professionnel : faire le minimum, sans démissionner — symptôme du rapport au travail."},
+{c:"S4",t:"def",f:"Halo du chômage",b:"Inactifs souhaitant travailler mais non comptabilisés au sens BIT."},
+{c:"S4",t:"aut",f:"Émile Durkheim",b:"De la division du travail social (1893). Solidarité mécanique → solidarité organique avec division du travail."},
+{c:"S4",t:"aut",f:"Karl Marx (travail)",b:"Aliénation : le travailleur est étranger à ce qu'il produit, à son activité, à lui-même, aux autres."},
+{c:"S4",t:"aut",f:"Georges Friedmann",b:"Travail en miettes (1956). Critique du taylorisme et de la parcellisation."},
+{c:"S4",t:"aut",f:"Robert Castel",b:"Les Métamorphoses de la question sociale (1995). De la société salariale à la désaffiliation."},
+{c:"S4",t:"aut",f:"Serge Paugam",b:"4 types d'intégration professionnelle : assurée, incertaine, laborieuse, disqualifiante."},
+{c:"S4",t:"aut",f:"Dominique Méda",b:"Le Travail, une valeur en voie de disparition ? Interroge la centralité du travail."},
+{c:"S4",t:"aut",f:"Boltanski & Chiapello",b:"Le Nouvel esprit du capitalisme (1999). Le management valorise autonomie/créativité au prix de l'insécurité."},
+{c:"S4",t:"aut",f:"David Graeber",b:"Bullshit Jobs (2018). Une partie des emplois est jugée inutile par ceux qui les occupent."},
+{c:"S4",t:"chf",f:"Emplois en France fin 2023",b:"≈ 30,4 millions (Insee)."},
+{c:"S4",t:"chf",f:"Part CDI",b:"≈ 75 % des actifs occupés mais 87 % des nouvelles embauches en CDD (DARES)."},
+{c:"S4",t:"chf",f:"Femmes dans l'emploi",b:"≈ 48,5 % de l'emploi total."},
+{c:"S4",t:"chf",f:"Travailleurs de plateformes",b:"≈ 3 millions en France (estimation large incluant auto-entrepreneurs liés à plateformes). [À vérifier]"},
+{c:"S4",t:"chf",f:"Auto-entrepreneurs",b:"≈ 2,5 millions en France (URSSAF). [À vérifier]"},
+{c:"S4",t:"chf",f:"Télétravail post-Covid",b:"≈ 25 % des cadres au moins 1 jour/semaine."},
+{c:"S4",t:"mec",f:"3 fonctions d'intégration du travail (Castel)",b:"Économique (revenu), symbolique (identité), relationnelle (collègues)."},
+{c:"S4",t:"mec",f:"Polarisation Goos-Manning",b:"Tâches routinières (manuelles ou cognitives) automatisées → emplois manuels non routiniers (services peu qualifiés) et abstraits (cadres)."},
+{c:"S4",t:"cnc",f:"Loi française 2022 plateformes",b:"Représentation collective des travailleurs de plateformes (livreurs, VTC). Tendance à requalification au cas par cas."},
+{c:"S4",t:"cnc",f:"Capitalisme de plateforme (Srnicek)",b:"Algorithme = nouvel employeur invisible. Subordination algorithmique."},
+{c:"S4",t:"cnc",f:"Frey-Osborne nuancé (Acemoglu)",b:"L'IA déplace les tâches plus qu'elle ne détruit des emplois, mais réduit la part du travail dans la VA."},
+{c:"S4",t:"cit",f:"Citation Castel",b:"« Le salariat n'a pas seulement été un statut, il a été un rempart contre l'arbitraire. »"},
+
+/* === S5 Engagement politique (30) === */
+{c:"S5",t:"def",f:"Engagement politique",b:"Toute action visant à influencer la vie publique, du vote à la manifestation."},
+{c:"S5",t:"def",f:"Action collective",b:"Action concertée d'un groupe pour défendre une cause commune."},
+{c:"S5",t:"def",f:"Passager clandestin (free rider)",b:"Individu qui bénéficie d'un bien collectif sans contribuer à sa production."},
+{c:"S5",t:"def",f:"Incitations sélectives",b:"Olson : avantages réservés aux membres d'une organisation pour résoudre le paradoxe (assurance syndicale, formation, prestige)."},
+{c:"S5",t:"def",f:"Rétributions du militantisme",b:"Gaxie (1977) : avantages symboliques, sociaux, identitaires que retirent les militants."},
+{c:"S5",t:"def",f:"Répertoire d'action collective",b:"Tilly : ensemble des moyens d'action disponibles à une époque (pétition, grève, occupation, pétitions en ligne)."},
+{c:"S5",t:"def",f:"Structure des opportunités politiques",b:"Tarrow, McAdam : configuration politique qui rend la mobilisation plus ou moins coûteuse/efficace."},
+{c:"S5",t:"def",f:"Nouveaux mouvements sociaux (NMS)",b:"Touraine : mobilisations post-1968 axées sur l'identité, valeurs post-matérialistes (féminisme, écologie, LGBT)."},
+{c:"S5",t:"def",f:"Engagement distancié (Ion)",b:"Engagement ponctuel, multiforme, sans appartenance durable (vs militantisme institué)."},
+{c:"S5",t:"def",f:"Slacktivisme",b:"Engagement faible coût en ligne (signature pétition, partage) — débattu quant à son efficacité."},
+{c:"S5",t:"aut",f:"Mancur Olson",b:"La Logique de l'action collective (1965). Paradoxe : si chacun rationnel attend que d'autres agissent, personne n'agit."},
+{c:"S5",t:"aut",f:"Albert Hirschman",b:"Exit, Voice, Loyalty (1970). 3 réactions face à l'insatisfaction : sortir, protester, rester loyal."},
+{c:"S5",t:"aut",f:"Daniel Gaxie",b:"Économie des partis et rétributions du militantisme (1977)."},
+{c:"S5",t:"aut",f:"Erik Neveu",b:"Sociologie des mouvements sociaux. Synthèse des approches."},
+{c:"S5",t:"aut",f:"Alain Touraine",b:"Théorie des nouveaux mouvements sociaux : passage du combat de classe au combat pour le sens."},
+{c:"S5",t:"aut",f:"Sidney Tarrow",b:"Power in Movement. Cycles de protestation et structures d'opportunités."},
+{c:"S5",t:"aut",f:"Charles Tilly",b:"Répertoires d'action collective historiques."},
+{c:"S5",t:"aut",f:"Ronald Inglehart",b:"Valeurs matérialistes (sécurité, emploi) → post-matérialistes (autonomie, environnement) avec l'élévation du niveau de vie."},
+{c:"S5",t:"aut",f:"Jacques Ion",b:"La fin des militants ? (1997). Engagement de plus en plus distancié."},
+{c:"S5",t:"aut",f:"Robert Putnam",b:"Bowling Alone (2000). Effondrement du capital social aux USA."},
+{c:"S5",t:"chf",f:"Abstention législatives 2022",b:"Record au 2ⁿᵈ tour : ≈ 54 %. [À vérifier]"},
+{c:"S5",t:"chf",f:"Syndicalisation France",b:"≈ 10 % des salariés (le plus bas de l'OCDE)."},
+{c:"S5",t:"exp",f:"Gilets jaunes (2018)",b:"Mouvement horizontal, sans leader, ancrage périphérique. Décomposition des médiations classiques."},
+{c:"S5",t:"exp",f:"Marches climat",b:"Greta Thunberg, marches mondiales 2019. Engagement de la Génération Z."},
+{c:"S5",t:"exp",f:"#MeToo",b:"Mobilisation transnationale 2017+. Médias sociaux comme infrastructure de l'action collective."},
+{c:"S5",t:"exp",f:"Réforme retraites 2023",b:"Inter-syndicale unitaire, manifestations massives mais loi adoptée par 49.3."},
+{c:"S5",t:"mec",f:"Paradoxe d'Olson",b:"Si bénéfice collectif partagé et coût individuel → free riding rationnel → action collective sous-optimale sans incitations."},
+{c:"S5",t:"cnc",f:"Variables sociodémographiques de l'engagement",b:"Diplôme (+), âge (jeunes : NMS ; vieux : vote), genre (assoc féminin), PCS (CSP+ partis, ouvriers syndicats)."},
+{c:"S5",t:"cnc",f:"Dépolitisation des classes populaires",b:"Hausse de l'abstention populaire, vote de protestation (RN, gauche radicale)."},
+{c:"S5",t:"cit",f:"Citation Bréchon (paraphrase)",b:"« On ne vote plus comme on était, on vote comme on se sent. »"},
+
+/* === R1 Justice sociale (30) — oral 2026 === */
+{c:"R1",t:"def",f:"Égalité formelle",b:"Mêmes droits pour tous devant la loi (égalité juridique)."},
+{c:"R1",t:"def",f:"Égalité réelle",b:"Conditions effectivement comparables entre individus (au-delà des droits)."},
+{c:"R1",t:"def",f:"Équité",b:"Traiter différemment les situations différentes pour aboutir à un résultat juste (Aristote, Rawls)."},
+{c:"R1",t:"def",f:"Voile d'ignorance (Rawls)",b:"Expérience de pensée : choisir les principes de justice sans savoir quelle place on occupera dans la société."},
+{c:"R1",t:"def",f:"Principe de différence (Rawls)",b:"Les inégalités sont acceptables seulement si elles bénéficient aux plus défavorisés."},
+{c:"R1",t:"def",f:"Capabilités (Sen)",b:"Liberté effective de mener la vie qu'on a raison de valoriser. Élargit la définition du bien-être."},
+{c:"R1",t:"def",f:"Discrimination positive",b:"Action ciblant un groupe défavorisé pour corriger une inégalité (CEP Sciences Po, parité)."},
+{c:"R1",t:"def",f:"Plafond de verre",b:"Barrières invisibles limitant l'accès des femmes (et minorités) aux postes de pouvoir."},
+{c:"R1",t:"def",f:"Coefficient de Gini",b:"Indicateur d'inégalité de 0 (parfaite égalité) à 1 (un seul possède tout)."},
+{c:"R1",t:"def",f:"Redistribution verticale",b:"Transferts des plus aisés vers les plus modestes (impôt progressif)."},
+{c:"R1",t:"def",f:"Redistribution horizontale",b:"Transferts entre catégories à risques différents (Sécu, retraites)."},
+{c:"R1",t:"aut",f:"John Rawls",b:"1921-2002, Théorie de la justice (1971). Voile d'ignorance, principe de différence, libertés fondamentales."},
+{c:"R1",t:"aut",f:"Robert Nozick",b:"1938-2002, Anarchie, État et utopie (1974). Libertarisme : justice = respect des droits, pas redistribution forcée."},
+{c:"R1",t:"aut",f:"Amartya Sen",b:"Nobel 1998. Approche par les capabilités, l'IDH."},
+{c:"R1",t:"aut",f:"Friedrich Hayek",b:"1899-1992. La justice sociale est un mirage : un ordre spontané n'est ni juste ni injuste."},
+{c:"R1",t:"aut",f:"Axel Honneth",b:"Justice = reconnaissance. Lutte pour la reconnaissance comme moteur historique."},
+{c:"R1",t:"aut",f:"Jean Tirole",b:"Économie du bien commun. Marché doit être encadré pour produire des résultats justes."},
+{c:"R1",t:"aut",f:"Michael Sandel",b:"The Tyranny of Merit (2020). Critique de la méritocratie qui blesse les perdants."},
+{c:"R1",t:"chf",f:"Gini France revenu disponible",b:"≈ 0,29 (après redistribution) vs ~0,42 avant redistribution (Insee)."},
+{c:"R1",t:"chf",f:"Écart salarial F/H ETP",b:"≈ 14,2 % en 2022 (Insee, à temps de travail équivalent)."},
+{c:"R1",t:"chf",f:"Top 10 % patrimoine France",b:"≈ 50 % du patrimoine total."},
+{c:"R1",t:"chf",f:"Réduction des inégalités par redistribution",b:"Coefficient de Gini réduit d'environ 30 % par les transferts en France. [À vérifier]"},
+{c:"R1",t:"exp",f:"CEP Sciences Po (2001)",b:"Conventions Éducation Prioritaire : recrutement spécifique en lycées REP. Discrimination positive en France."},
+{c:"R1",t:"exp",f:"Loi sur la parité",b:"2000 (politique), 2011 (CA des grandes entreprises). Sanctions financières en cas de non-respect."},
+{c:"R1",t:"exp",f:"Testing CV à consonance étrangère",b:"Études Insee/CNRS : ~50 % de chances de rappel en moins à CV équivalent."},
+{c:"R1",t:"cnc",f:"3 grandes conceptions",b:"Utilitarisme (Bentham, max utilité), libertarisme (Nozick), égalitarisme (Rawls, Sen)."},
+{c:"R1",t:"cnc",f:"Universalisme vs différencialisme",b:"FR : citoyenneté indifférenciée. USA : reconnaissance des minorités."},
+{c:"R1",t:"cnc",f:"Trappe à inactivité",b:"Prestations sociales mal calibrées qui découragent la reprise d'emploi. Réponses : prime d'activité, RSA conditionnel."},
+{c:"R1",t:"cit",f:"Citation Rawls",b:"« Sous le voile d'ignorance, nul ne sait quelle place il occupera dans la société. »"},
+{c:"R1",t:"cit",f:"Citation Hayek",b:"« La justice sociale est un mirage. »"},
+{c:"R1",t:"cit",f:"Citation Sen",b:"« Le développement est un processus d'expansion des libertés réelles. »"},
+
+/* === R2 Action publique environnement (30) === */
+{c:"R2",t:"def",f:"Externalité négative",b:"Coût subi par un tiers non rémunéré (pollution). Justifie l'intervention publique."},
+{c:"R2",t:"def",f:"Bien commun",b:"Bien rival (consommation par l'un réduit la disponibilité pour l'autre) mais non excluable (difficile d'empêcher l'accès) — ex. atmosphère."},
+{c:"R2",t:"def",f:"Tragédie des communs (Hardin, 1968)",b:"Sans règles, chaque utilisateur surexploite la ressource commune (pâturage, océan)."},
+{c:"R2",t:"def",f:"Taxe pigouvienne",b:"Pigou (1920) : taxe égale au coût social marginal de la pollution → l'agent internalise l'externalité."},
+{c:"R2",t:"def",f:"Marché de quotas",b:"Coase (1960) : créer des droits à polluer échangeables → prix de marché pour le carbone (ETS)."},
+{c:"R2",t:"def",f:"Internalisation",b:"Mécanisme conduisant un agent à intégrer le coût externe dans son calcul (taxe, quota, norme)."},
+{c:"R2",t:"def",f:"Passager clandestin (climat)",b:"Un État qui ne réduit pas ses émissions profite de l'effort des autres → frein aux accords internationaux."},
+{c:"R2",t:"def",f:"Justice environnementale",b:"Inégale exposition aux risques et inégale capacité à se protéger ; débat Nord-Sud, intra-pays."},
+{c:"R2",t:"aut",f:"Arthur Pigou",b:"1877-1959. Taxe pigouvienne (1920) : faire payer le coût social externe."},
+{c:"R2",t:"aut",f:"Ronald Coase",b:"Nobel 1991. The Problem of Social Cost (1960). Si droits de propriété bien définis et coûts de transaction faibles → négociation privée optimale."},
+{c:"R2",t:"aut",f:"Garrett Hardin",b:"The Tragedy of the Commons (1968). Surexploitation des ressources non appropriées."},
+{c:"R2",t:"aut",f:"Elinor Ostrom",b:"Nobel 2009. Governing the Commons (1990). Communautés peuvent gérer collectivement les communs sans privatisation ni étatisation."},
+{c:"R2",t:"aut",f:"Nicholas Stern",b:"Stern Review (2006). Agir contre le changement climatique = 1 % du PIB mondial ; ne pas agir = 5 à 20 %."},
+{c:"R2",t:"aut",f:"William Nordhaus",b:"Nobel 2018. Modèle DICE : prix optimal du carbone."},
+{c:"R2",t:"aut",f:"Christian Gollier",b:"Le Climat après la fin du mois. Plaidoyer pour un prix du carbone unique mondial."},
+{c:"R2",t:"chf",f:"Émissions GES France 2023",b:"≈ 393 Mt CO₂eq, soit -20 % vs 1990 (CITEPA)."},
+{c:"R2",t:"chf",f:"Objectif Fit for 55",b:"-55 % d'émissions à 2030 vs 1990 (UE)."},
+{c:"R2",t:"chf",f:"Prix tonne CO₂ ETS UE",b:"≈ 70-90 €/t (2024)."},
+{c:"R2",t:"chf",f:"Top 10 % émetteurs (Chancel)",b:"Émettent ≈ 50 % du CO₂ mondial."},
+{c:"R2",t:"chf",f:"Investissements verts mondiaux",b:"≈ 1 800 Md$/an, environ 4× moins que nécessaire (AIE)."},
+{c:"R2",t:"chf",f:"Taxe carbone française",b:"≈ 44 €/t (gelée depuis 2018 — Gilets jaunes)."},
+{c:"R2",t:"exp",f:"Accord de Paris (COP21, 2015)",b:"Limiter le réchauffement < 2 °C, idéalement 1,5 °C. Engagements nationaux (NDC)."},
+{c:"R2",t:"exp",f:"Pacte vert européen (2019)",b:"Neutralité carbone à 2050. Stratégie globale UE."},
+{c:"R2",t:"exp",f:"CBAM",b:"Mécanisme d'ajustement carbone aux frontières — opérationnel pleinement à partir de 2026."},
+{c:"R2",t:"exp",f:"COP28 Dubaï 2023",b:"1ère mention explicite de la sortie des énergies fossiles dans un texte officiel COP."},
+{c:"R2",t:"mec",f:"3 outils d'action publique",b:"Réglementation (norme), taxation (signal-prix), quotas marchands (plafond + échanges)."},
+{c:"R2",t:"mec",f:"Découplage absolu vs relatif",b:"Relatif : émissions/PIB baissent. Absolu : émissions baissent en valeur absolue malgré croissance. Rare à l'échelle mondiale."},
+{c:"R2",t:"cnc",f:"Gouvernance multi-niveaux",b:"International (Paris, COP), européen (Pacte vert, ETS, CBAM), national (SNBC), local (PCAET, ZFE)."},
+{c:"R2",t:"cnc",f:"Fuites de carbone",b:"Délocalisation d'industries polluantes vers pays moins regardants → CBAM cherche à empêcher."},
+{c:"R2",t:"cit",f:"Citation Tirole",b:"« Le marché ne sait pas voir au-delà du court terme : c'est à l'action publique de penser pour les générations futures. »"},
+{c:"R2",t:"cit",f:"Citation Stern",b:"« Le changement climatique est la plus grande défaillance de marché jamais observée. »"}
+];
+
+/* ============================================================
+   ANNALES 2022-2025 — sujets, type, chapitre(s), plan-type
+   ============================================================ */
+const ANNALES = [
+{ann:"2022 J1 Métropole", type:"Dissertation", chap:["E1"],
+ sujet:"Quelles sont les sources de la croissance économique ?",
+ plan:["I. Les sources traditionnelles : accumulation des facteurs (K, L) et progrès technique (Solow)",
+       "II. Les sources contemporaines : innovation, capital humain, institutions (Romer, Aghion, Acemoglu)"],
+ notions:["PIB","facteurs de production","PGF","progrès technique endogène","institutions"],
+ pieges:["Oublier les institutions","Réduire à Solow"], proba:"moyenne"},
+{ann:"2022 J1 EC2 Métropole", type:"EC2", chap:["S1"],
+ sujet:"Document statistique sur la structure socioprofessionnelle française.",
+ notions:["PCS","tertiarisation","salarisation"], proba:"moyenne"},
+{ann:"2022 J1 EC3 Métropole", type:"EC3", chap:["E4","S4"],
+ sujet:"Mutations du travail liées à la mondialisation.",
+ plan:["I. La mondialisation transforme l'emploi (CVM, IDE, délocalisations)",
+       "II. Mais elle ne suffit pas à expliquer toutes les mutations (NTIC, tertiarisation, démographie)"],
+ notions:["FMN","CVM","polarisation","tertiarisation"], proba:"moyenne"},
+{ann:"2022 J2 Métropole", type:"Dissertation", chap:["E4"],
+ sujet:"Comment expliquer le commerce international entre pays comparables ?",
+ plan:["I. Les théories classiques (Ricardo, HOS) expliquent mal ces échanges",
+       "II. La nouvelle théorie (Krugman) : économies d'échelle, différenciation, intra-branche"],
+ notions:["avantage comparatif","HOS","Krugman","commerce intra-branche"], proba:"faible"},
+{ann:"2023 J1 Métropole", type:"Dissertation", chap:["S5"],
+ sujet:"Comment l'engagement politique se transforme-t-il dans les sociétés démocratiques ?",
+ plan:["I. Les formes classiques de l'engagement (vote, partis, syndicats) déclinent",
+       "II. Mais de nouvelles formes apparaissent (NMS, distancié, numérique, consumériste)"],
+ notions:["NMS","engagement distancié","Olson","incitations sélectives","Inglehart"],
+ pieges:["Conclure trop vite à un déclin","Oublier le numérique"], proba:"élevée"},
+{ann:"2023 J1 EC2", type:"EC2", chap:["E1"],
+ sujet:"Étude d'un document statistique sur la croissance et la productivité.",
+ notions:["PIB","productivité","PGF"], proba:"moyenne"},
+{ann:"2023 J2 Métropole", type:"Dissertation", chap:["R2"],
+ sujet:"Quels sont les instruments dont disposent les pouvoirs publics pour préserver l'environnement ?",
+ plan:["I. Les instruments économiques (taxes, quotas) reposent sur l'internalisation des externalités",
+       "II. Les autres instruments (normes, gouvernance multi-niveaux, communs Ostrom) complètent et débattent"],
+ notions:["externalité","taxe pigouvienne","quotas","Ostrom","biens communs"], proba:"élevée"},
+{ann:"2024 J1 Métropole", type:"Dissertation", chap:["S4"],
+ sujet:"Le travail intègre-t-il toujours dans la société française actuelle ?",
+ plan:["I. Le travail reste un puissant facteur d'intégration (Castel, Paugam)",
+       "II. Mais sa précarisation et sa transformation fragilisent ses fonctions intégratrices"],
+ notions:["intégration","désaffiliation","précarisation","Castel","Paugam"],
+ pieges:["Oublier les 3 dimensions de Castel","Confondre travail et emploi"], proba:"très élevée"},
+{ann:"2024 J1 EC2", type:"EC2", chap:["S4"],
+ sujet:"Document statistique sur le numérique et l'emploi.",
+ notions:["polarisation","NTIC","télétravail","ubérisation"], proba:"élevée"},
+{ann:"2024 J1 EC3", type:"EC3", chap:["S3"],
+ sujet:"Mobilité sociale et facteurs explicatifs.",
+ plan:["I. La mobilité observée a des sources structurelles importantes",
+       "II. Mais la fluidité reste limitée par la reproduction (école, famille)"],
+ notions:["mobilité structurelle","fluidité","reproduction","Bourdieu","Goldthorpe"], proba:"élevée"},
+{ann:"2025 J1 Métropole", type:"Dissertation", chap:["E5"],
+ sujet:"Comment articuler politiques monétaire et budgétaire dans la zone euro ?",
+ plan:["I. Une articulation contrainte par l'architecture de la zone euro (BCE indépendante, États souverains)",
+       "II. Une articulation perfectible : crises, NextGenEU, débat sur l'union budgétaire"],
+ notions:["BCE","Maastricht","policy-mix","ZMO","NextGenEU","Aglietta"],
+ pieges:["Confondre BCE et Fed","Oublier le Pacte de stabilité"], proba:"faible"},
+{ann:"2025 J1 EC1", type:"EC1", chap:["S5"],
+ sujet:"Montrez que les incitations sélectives favorisent l'engagement politique.",
+ notions:["Olson","passager clandestin","incitations sélectives","rétributions"], proba:"élevée"},
+{ann:"2025 J1 EC2", type:"EC2", chap:["E1"],
+ sujet:"Document statistique sur le PIB France et Allemagne 2020-2022.",
+ notions:["PIB volume","croissance","comparaison internationale"], proba:"moyenne"},
+{ann:"2025 J2 Métropole", type:"Dissertation", chap:["S1"],
+ sujet:"Une approche en termes de classes sociales suffit-elle à rendre compte de la structure de la société française actuelle ?",
+ plan:["I. L'approche en termes de classes reste pertinente (Marx, Bourdieu, Piketty)",
+       "II. D'autres clivages la complètent : genre, âge, territoire, individualisation"],
+ notions:["classes","capitaux","Bourdieu","intersectionnalité","Beck","Singly"],
+ pieges:["Présenter Marx et Weber comme opposés","Oublier la thèse de la moyennisation"], proba:"très élevée"},
+{ann:"2025 J2 EC1", type:"EC1", chap:["E3"],
+ sujet:"Montrez que les asymétries d'information peuvent expliquer le chômage structurel.",
+ notions:["asymétrie","sélection adverse","salaire d'efficience","appariement"], proba:"élevée"},
+{ann:"2025 J2 EC2", type:"EC2", chap:["R2"],
+ sujet:"Document sur les émissions de GES Chine/monde 1990-2021 et le passager clandestin.",
+ notions:["passager clandestin","gouvernance multi-niveaux","CBAM"], proba:"élevée"},
+{ann:"Sujet zéro 2021", type:"Dissertation", chap:["E1","R2"],
+ sujet:"Comment concilier croissance économique et préservation de l'environnement ?",
+ plan:["I. La croissance produit des externalités (Pigou, Hardin) qui menacent l'environnement",
+       "II. Des outils existent (innovation verte, taxe, quotas, communs) — débat croissance verte/décroissance"],
+ notions:["croissance","externalité","découplage","Stern","Latouche"], proba:"moyenne"}
+];
+
+/* ============================================================
+   MÉTHODOLOGIES (mode chronométré)
+   ============================================================ */
+const METHODO = {
+ ec1:{
+  titre:"EC1 — Mobilisation des connaissances (4 pts)",
+  duree:40, chapDef:30,
+  consigne:"Question ouverte sans document, ~1 page, intro courte + 2-3 paragraphes AEI (Affirmation/Explication/Illustration).",
+  conseils:["Pas d'accroche", "Définir les notions clés en intro", "2 ou 3 § AEI ; 1 idée = 1 §",
+   "Verbes attendus : montrez, expliquez, illustrez, distinguez", "Conclure brièvement"],
+  critères:["Définitions présentes","Structure AEI","Mobilisation cours","Exemples concrets","Expression claire"],
+  exemples:[
+   "Montrez que les externalités peuvent justifier l'intervention de l'État.",
+   "Expliquez en quoi les incitations sélectives favorisent l'engagement politique.",
+   "Distinguez mobilité observée et fluidité sociale.",
+   "Illustrez à l'aide d'un exemple le rôle des FMN dans le commerce international."]
+ },
+ ec2:{
+  titre:"EC2 — Étude d'un document (6 pts)",
+  duree:60,
+  consigne:"Document statistique le plus souvent (≤120 données, ou texte ≤2500 signes). Présenter, lire, calculer, interpréter.",
+  conseils:["Présenter : nature, source, date, unité, champ","Lire les données brutes",
+   "Calculer si pertinent (taux de variation, parts %, coef multiplicateur)",
+   "Interpréter avec le cours","2 questions habituellement (descriptive 2 pts + analytique 4 pts)"],
+  critères:["Présentation complète","Lecture exacte","Calculs justes","Interprétation mobilisée","Pas de paraphrase"],
+  formules:["TV = (Vf - Vi)/Vi × 100","Coef multiplicateur = Vf/Vi","TCAM = (Vf/Vi)^(1/n) − 1",
+   "Indice base 100 : V/V₀ × 100","Élasticité = (ΔY/Y)/(ΔX/X)","Productivité L = Q/L"],
+  exemples:["Document : taux de chômage France 2010-2024.",
+   "Document : émissions GES par décile.",
+   "Document : PCS en 1982 vs 2024."]
+ },
+ ec3:{
+  titre:"EC3 — Raisonnement appuyé sur un dossier (10 pts)",
+  duree:90,
+  consigne:"Mini-dissertation : intro + 2 parties AEI + conclusion. Dossier de 2-3 documents à exploiter TOUS.",
+  conseils:["Intro : accroche + définitions + problématique + annonce",
+   "2 parties claires, sous-parties AEI",
+   "Mobiliser CHAQUE document au moins une fois","Pas de paraphrase ; analyser",
+   "Conclusion : réponse explicite + ouverture"],
+  critères:["Pb claire","Plan structuré","Tous documents exploités","Connaissances mobilisées","Argumentation rigoureuse"],
+  exemples:["À l'aide du dossier, vous montrerez comment l'École agit sur les destins individuels.",
+   "Comment le commerce international transforme-t-il l'emploi ?",
+   "Comment l'action publique peut-elle réduire les inégalités environnementales ?"]
+ },
+ dis:{
+  titre:"Dissertation (20 pts)",
+  duree:240,
+  consigne:"4 h. Sujet + dossier de 3-4 documents factuels. 2 parties recommandées (parfois 3). Méthode AEI.",
+  conseils:["30 min : analyse du sujet + plan + intro au brouillon",
+   "2 h 30 : rédaction au propre, 2 parties × 2-3 sous-parties",
+   "30 min : relecture, conclusion, transitions, orthographe",
+   "Intro 5 étapes : accroche / définitions / contexte / problématique / annonce",
+   "Chaque § AEI : Affirmer / Expliquer / Illustrer (chiffre, exemple, doc)",
+   "Conclusion : réponse explicite + ouverture (jamais une question)"],
+  critères:["Problématisation","Plan structuré","Mobilisation des documents","Connaissances précises","Argumentation","Expression écrite"],
+  exemples:["Comment expliquer la mobilité sociale en France ?",
+   "L'École peut-elle réduire les inégalités sociales ?",
+   "Quels instruments l'action publique mobilise-t-elle pour l'environnement ?"]
+ }
+};
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+function uid(){ return Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+function todayKey(){ const d = new Date(); return d.toISOString().slice(0,10); }
+function daysBetween(a, b){ return Math.floor((b - a) / 86400000); }
+function pad(n){ return n<10 ? "0"+n : ""+n; }
+function fmtTime(s){
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return (h>0?h+":":"") + pad(m) + ":" + pad(sec);
+}
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+function toast(msg, ms=2200){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast"; t.style.display = "block";
+  clearTimeout(window._tt);
+  window._tt = setTimeout(()=>{ t.style.display = "none"; }, ms);
+}
+function findChap(code){ return CHAPITRES.find(c => c.code === code); }
+
+/* ============================================================
+   MIGRATION v1 → v2
+   v1 stockait : { done:{eco-1:true,...}, star:{...}, level:{...} }
+   v2 utilise codes E1..R2 et prefs.done/star/level
+   ============================================================ */
+function migrateV1(){
+  try{
+    const raw = localStorage.getItem(V1_KEY);
+    if(!raw) return false;
+    const v1 = JSON.parse(raw);
+    const map = {
+      "eco-1":"E1", "eco-2":"E3", "eco-3":"E2", "eco-4":"E4",
+      "soc-1":"S1", "soc-2":"S2", "soc-3":"S3", "soc-4":"S4", "soc-5":"S5",
+      "rc-1":"R1", "rc-2":"R2"
+    };
+    let migrated = 0;
+    for(const k in (v1.done||{})){ if(v1.done[k] && map[k]){ prefs.done[map[k]] = true; migrated++; } }
+    for(const k in (v1.star||{})){ if(v1.star[k] && map[k]) prefs.star[map[k]] = true; }
+    for(const k in (v1.level||{})){ if(map[k]) prefs.level[map[k]] = v1.level[k]; }
+    savePrefs();
+    if(migrated > 0) toast("Migration v1 → v2 : " + migrated + " chapitres importés.");
+    localStorage.removeItem(V1_KEY);
+    return true;
+  }catch(e){ console.warn("Migration v1 échouée :", e); return false; }
+}
+
+/* ============================================================
+   CARDS — load seed dans IndexedDB la 1ère fois
+   ============================================================ */
+async function ensureCardsSeeded(){
+  const all = await dbAll("cards");
+  if(all.length > 0) return all;
+  const now = Date.now();
+  const cards = FC_SEED.map((c,i) => ({
+    id: "seed_" + c.c + "_" + i,
+    chapitre: c.c, type: c.t, front: c.f, back: c.b, tags: c.tags || [],
+    sm2: { repetition:0, interval:0, efactor:2.5, dueDate: now },
+    history: [], userCreated: false
+  }));
+  for(const c of cards) await dbPut("cards", c);
+  return cards;
+}
+
+async function getDueCards(chap = "all"){
+  const all = await dbAll("cards");
+  const now = Date.now();
+  let due = all.filter(c => (c.sm2 ? c.sm2.dueDate : 0) <= now);
+  if(chap !== "all") due = due.filter(c => c.chapitre === chap);
+  for(let i=due.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [due[i],due[j]] = [due[j],due[i]]; }
+  return due;
+}
+
+/* ============================================================
+   ROUTER
+   ============================================================ */
+const routes = {
+  home:renderHome, programme:renderProgramme, chapitre:renderChapitre,
+  cards:renderCards, quiz:renderQuiz, methodo:renderMethodo,
+  exam:renderExam, planning:renderPlanning, stats:renderStats,
+  annales:renderAnnales, settings:renderSettings,
+  calc:renderCalc, oral:renderOral, verbes:renderVerbes
+};
+function parseHash(){
+  const h = location.hash.replace(/^#\//,"") || "home";
+  const [name, ...rest] = h.split("&");
+  const params = {};
+  rest.forEach(p => { const [k,v] = p.split("="); params[k] = decodeURIComponent(v||""); });
+  return { name, params };
+}
+function go(target){ location.hash = "#/" + target; }
+function navigate(){
+  const { name, params } = parseHash();
+  document.querySelectorAll("section[data-route]").forEach(s => s.classList.toggle("active", s.dataset.route === name));
+  document.querySelectorAll(".navItem").forEach(b => {
+    const t = b.dataset.go || ""; b.classList.toggle("active", t.split("&")[0] === name);
+  });
+  closeDrawer();
+  const fn = routes[name] || renderHome;
+  try{ fn(params); } catch(e){ console.error(e); toast("Erreur de rendu : " + e.message); }
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", navigate);
+
+/* ============================================================
+   DRAWER
+   ============================================================ */
+const drawerEl = document.getElementById("drawer");
+function openDrawer(){ drawerEl.classList.add("open"); drawerEl.setAttribute("aria-hidden","false"); }
+function closeDrawer(){ drawerEl.classList.remove("open"); drawerEl.setAttribute("aria-hidden","true"); }
+document.getElementById("menuBtn").addEventListener("click", openDrawer);
+drawerEl.addEventListener("click", e => { if(e.target === drawerEl) closeDrawer(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeDrawer(); });
+
+document.body.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if(b){ e.preventDefault(); go(b.dataset.go); }
+});
+
+/* ============================================================
+   RENDER : HOME
+   ============================================================ */
+async function renderHome(){
+  await ensureCardsSeeded();
+  const all = await dbAll("cards");
+  const now = Date.now();
+  const due = all.filter(c => (c.sm2?.dueDate||0) <= now).length;
+  const learned = all.filter(c => (c.sm2?.interval||0) >= 21).length;
+  const total = all.length;
+  const stats = document.getElementById("homeStats");
+  stats.innerHTML = `
+    <div><div style="font-size:22px;font-weight:800">${due}</div><div class="muted" style="font-size:11px">cartes dues</div></div>
+    <div><div style="font-size:22px;font-weight:800">${learned}</div><div class="muted" style="font-size:11px">maîtrisées</div></div>
+    <div><div style="font-size:22px;font-weight:800">${total}</div><div class="muted" style="font-size:11px">total cartes</div></div>
+    <div><div style="font-size:22px;font-weight:800">${Object.values(prefs.done).filter(Boolean).length}/12</div><div class="muted" style="font-size:11px">chapitres vus</div></div>`;
+  document.getElementById("homeStreak").innerHTML = `${prefs.streak||0}<small> jour${(prefs.streak||0)>1?"s":""} de série</small>`;
+
+  const todoBox = document.getElementById("homeTodo");
+  const items = [];
+  // Détection du chapitre le plus faible (parmi évaluables à l'écrit 2026)
+  const perChap = {};
+  for(const x of all){
+    if(!perChap[x.chapitre]) perChap[x.chapitre] = {tot:0, bad:0, hist:0};
+    perChap[x.chapitre].tot++;
+    const last = (x.history||[]).slice(-3);
+    if(last.length){
+      const avg = last.reduce((s,h)=>s+h.q,0)/last.length;
+      perChap[x.chapitre].hist += last.length;
+      if(avg < 3) perChap[x.chapitre].bad++;
+    }
+  }
+  let weakest = null, worstScore = 0;
+  for(const c of CHAPITRES){
+    if(!c.evaluableEcrit2026) continue;
+    const p = perChap[c.code]; if(!p || p.hist < 3) continue;
+    const ratio = p.bad / p.tot;
+    if(ratio > worstScore){ worstScore = ratio; weakest = c; }
+  }
+  if(weakest && worstScore > 0.15){
+    items.push(`<div class="card" style="background:rgba(239,68,68,.10);border-color:rgba(239,68,68,.35);margin:0">
+      <div class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:#fca5a5">⚠️ Point faible détecté</div>
+      <div style="margin:6px 0 8px;font-size:14px"><b>${weakest.code}</b> — ${escapeHTML(weakest.titre)}</div>
+      <button class="btn primary" data-go="cards&c=${weakest.code}">🎯 Drill ce chapitre</button>
+    </div>`);
+  }
+  if(due > 0) items.push(`<button class="btn full" data-go="cards">🎴 Réviser <b>${due}</b> cartes dues</button>`);
+  const notSeen = CHAPITRES.filter(c => !prefs.done[c.code] && c.evaluableEcrit2026)[0];
+  if(notSeen) items.push(`<button class="btn full" data-go="chapitre&c=${notSeen.code}">📚 Lire ${notSeen.code} — ${escapeHTML(notSeen.titre)}</button>`);
+  items.push(`<button class="btn full" data-go="calc">🧮 Drill calcul mental EC2 (5 min)</button>`);
+  items.push(`<button class="btn full" data-go="methodo&t=ec1">📝 Faire un EC1 chronométré</button>`);
+  todoBox.innerHTML = items.join('<div style="height:8px"></div>');
+}
+
+/* ============================================================
+   RENDER : PROGRAMME
+   ============================================================ */
+let progFilter = "all", progSearch = "";
+function renderProgramme(){
+  const list = document.getElementById("progList");
+  const grouped = { "Science économique":[], "Sociologie & science politique":[], "Regards croisés":[] };
+  const q = progSearch.toLowerCase();
+  for(const c of CHAPITRES){
+    if(progFilter === "ecrit" && !c.evaluableEcrit2026) continue;
+    if(progFilter === "oral" && c.evaluableEcrit2026) continue;
+    if(progFilter === "star" && !prefs.star[c.code]) continue;
+    if(q){
+      const hay = (c.titre + " " + c.keywords.join(" ") + " " + c.domaine).toLowerCase();
+      if(!hay.includes(q)) continue;
+    }
+    grouped[c.domaine].push(c);
+  }
+  list.innerHTML = "";
+  for(const dom of Object.keys(grouped)){
+    if(grouped[dom].length === 0) continue;
+    const head = document.createElement("div");
+    head.className = "pillar " + (dom.startsWith("Sociologie") ? "s" : dom.startsWith("Regards") ? "r" : "");
+    head.textContent = dom;
+    list.appendChild(head);
+    const grid = document.createElement("div");
+    grid.className = "grid";
+    for(const c of grouped[dom]){
+      const card = document.createElement("button");
+      card.className = "chapCard";
+      const badge = c.evaluableEcrit2026
+        ? `<span class="chip ok">🎯 Écrit 2026</span>`
+        : `<span class="chip warn">🎤 Oral seulement</span>`;
+      const proba = c.probaSujet2026 ? `<span class="chip alt">Proba: ${c.probaSujet2026}</span>` : "";
+      const done = prefs.done[c.code] ? `<span class="chip ok">✓ Vu</span>` : "";
+      card.innerHTML = `
+        <span class="starBtn ${prefs.star[c.code]?'on':''}" data-star="${c.code}">★</span>
+        <div class="num">${c.code} · ${c.domaine}</div>
+        <h3>${escapeHTML(c.titre)}</h3>
+        <div class="meta">${badge} ${proba} ${done}</div>`;
+      card.addEventListener("click", e => {
+        if(e.target.dataset.star){
+          e.stopPropagation();
+          prefs.star[c.code] = !prefs.star[c.code]; savePrefs(); renderProgramme();
+        } else go("chapitre&c=" + c.code);
+      });
+      grid.appendChild(card);
+    }
+    list.appendChild(grid);
+  }
+  if(list.children.length === 0) list.innerHTML = `<div class="empty">Aucun chapitre.</div>`;
+}
+document.getElementById("searchProg").addEventListener("input", e => { progSearch = e.target.value; renderProgramme(); });
+document.querySelectorAll("[data-filter]").forEach(b => b.addEventListener("click", () => {
+  progFilter = b.dataset.filter;
+  document.querySelectorAll("[data-filter]").forEach(x => x.classList.toggle("info", x === b));
+  renderProgramme();
+}));
+
+/* ============================================================
+   RENDER : CHAPITRE detail
+   ============================================================ */
+let currentChap = null, currentTab = "cours", currentLvl = 0;
+function renderChapitre(params){
+  const code = params.c;
+  const c = findChap(code);
+  if(!c){ document.getElementById("chBody").innerHTML = `<div class="empty">Chapitre introuvable.</div>`; return; }
+  currentChap = c;
+  document.getElementById("chTitle").textContent = c.titre;
+  const meta = document.getElementById("chMeta");
+  const badge = c.evaluableEcrit2026
+    ? `<span class="chip ok">🎯 Écrit 2026</span>`
+    : `<span class="chip warn">🎤 Oral seulement</span>`;
+  meta.innerHTML = `<span class="chip">${c.code}</span><span class="chip alt">${c.domaine}</span>${badge}` +
+    (c.probaSujet2026 ? `<span class="chip">Proba: ${c.probaSujet2026}</span>` : "") +
+    (prefs.done[c.code] ? `<span class="chip ok">✓ Vu</span>` : "");
+
+  document.querySelectorAll("#chTabs button").forEach(b => {
+    b.classList.toggle("active", b.dataset.tab === currentTab);
+    b.onclick = () => { currentTab = b.dataset.tab; renderChapitre(params); };
+  });
+  currentLvl = prefs.level[c.code] ?? 0;
+  if(currentTab === "cours") renderCoursTab(c);
+  else if(currentTab === "cards") renderCardsTab(c);
+  else renderAnnalesTab(c);
+}
+
+function renderCoursTab(c){
+  const body = document.getElementById("chBody");
+  let html = `<div class="levels">`;
+  c.niveaux.forEach((n,i) => {
+    const cls = i === currentLvl ? "active" : "";
+    html += `<button class="lvlBtn ${cls}" data-lvl="${i}"><span class="lbl">${escapeHTML(n.label)}</span><span class="note">${escapeHTML(n.note)}</span></button>`;
+  });
+  html += `</div>`;
+  const L = c.niveaux[currentLvl];
+  html += `<div class="card synth">`;
+  html += `<p class="muted" style="font-size:13.5px;margin:0 0 6px"><span class="tagInline">Objectif ${escapeHTML(L.note)}</span> ${escapeHTML(L.intro)}</p>`;
+  for(const sec of L.sections){
+    html += `<h4>${escapeHTML(sec.h)}</h4><ul>${sec.items.map(x => `<li>${x}</li>`).join("")}</ul>`;
+  }
+  html += `</div>`;
+  if(c.plansType?.length){
+    html += `<div class="card synth"><h4>Plans-types</h4><ul>${c.plansType.map(p=>`<li>${escapeHTML(p)}</li>`).join("")}</ul></div>`;
+  }
+  if(c.pieges?.length){
+    html += `<div class="card synth"><h4>⚠️ Pièges classiques</h4><ul>${c.pieges.map(p=>`<li>${escapeHTML(p)}</li>`).join("")}</ul></div>`;
+  }
+  html += `<div class="row" style="gap:8px;margin-top:14px">
+    <button class="btn ${prefs.done[c.code]?'primary':''}" id="markDone">${prefs.done[c.code]?'✓ Chapitre vu':'Marquer comme vu'}</button>
+    <button class="btn ghost" onclick="window.print()">🖨️ Imprimer</button>
+  </div>`;
+  body.innerHTML = html;
+  body.querySelectorAll(".lvlBtn").forEach(b => b.onclick = () => {
+    currentLvl = +b.dataset.lvl; prefs.level[c.code] = currentLvl; savePrefs(); renderCoursTab(c);
+  });
+  document.getElementById("markDone").onclick = () => {
+    prefs.done[c.code] = !prefs.done[c.code]; savePrefs(); renderChapitre({c:c.code});
+  };
+}
+
+async function renderCardsTab(c){
+  const body = document.getElementById("chBody");
+  await ensureCardsSeeded();
+  const all = await dbAll("cards");
+  const cards = all.filter(x => x.chapitre === c.code);
+  const due = cards.filter(x => (x.sm2?.dueDate||0) <= Date.now()).length;
+  const learned = cards.filter(x => (x.sm2?.interval||0) >= 21).length;
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><div style="font-size:13px;color:var(--muted)">Flashcards de ce chapitre</div>
+          <div style="font-size:24px;font-weight:800">${cards.length}</div></div>
+        <div style="text-align:right"><div style="font-size:13px;color:var(--muted)">Dues / Maîtrisées</div>
+          <div style="font-size:18px;font-weight:700">${due} <span class="muted">/</span> ${learned}</div></div>
+      </div>
+      <div class="bar-h"><div style="width:${cards.length?Math.round(learned/cards.length*100):0}%"></div></div>
+      <div class="row mt"><button class="btn primary" data-go="cards&c=${c.code}">🎴 Réviser ce chapitre</button>
+        <button class="btn" data-go="quiz&c=${c.code}">❓ Quiz</button></div>
+    </div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Liste des cartes</h4>
+      <div id="cardListIn"></div></div>`;
+  const listEl = document.getElementById("cardListIn");
+  listEl.innerHTML = cards.map(x => `
+    <div style="border-bottom:1px solid var(--line);padding:8px 0">
+      <div style="font-size:13px"><span class="chip" style="margin-right:6px">${x.type}</span>${escapeHTML(x.front)}</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:3px">${escapeHTML(x.back)}</div>
+    </div>`).join("");
+}
+
+function renderAnnalesTab(c){
+  const body = document.getElementById("chBody");
+  const ann = ANNALES.filter(a => a.chap.includes(c.code));
+  if(ann.length === 0){ body.innerHTML = `<div class="empty">Pas d'annale dédiée pour ce chapitre.</div>`; return; }
+  body.innerHTML = ann.map(a => annaleCard(a)).join("");
+}
+function annaleCard(a){
+  const probaCls = a.proba === "très élevée" || a.proba === "élevée" ? "warn" : "";
+  return `<div class="card">
+    <div class="row" style="gap:6px"><span class="chip alt">${escapeHTML(a.ann)}</span>
+      <span class="chip">${escapeHTML(a.type)}</span>
+      ${a.chap.map(ch=>`<span class="chip info">${ch}</span>`).join("")}
+      ${a.proba?`<span class="chip ${probaCls}">Proba 2026: ${a.proba}</span>`:""}</div>
+    <p style="margin:8px 0 4px;font-weight:600">${escapeHTML(a.sujet)}</p>
+    ${a.plan?`<h4 style="margin:10px 0 4px;font-size:11px;color:var(--muted);letter-spacing:1.2px;text-transform:uppercase">Plan-type proposé</h4>
+      <ul style="margin:4px 0 8px">${a.plan.map(p=>`<li>${escapeHTML(p)}</li>`).join("")}</ul>`:""}
+    ${a.notions?`<div class="row" style="gap:4px;margin:6px 0"><b style="font-size:12px">Notions :</b>${a.notions.map(n=>`<span class="chip">${escapeHTML(n)}</span>`).join("")}</div>`:""}
+    ${a.pieges?`<div style="font-size:12.5px;color:var(--muted)"><b>⚠️</b> ${a.pieges.map(escapeHTML).join(" · ")}</div>`:""}
+  </div>`;
+}
+
+/* ============================================================
+   RENDER : CARDS (révision SM-2)
+   ============================================================ */
+let cardQueue = [], cardIdx = 0, cardFlipped = false;
+async function renderCards(params){
+  await ensureCardsSeeded();
+  const sel = document.getElementById("cardChapFilter");
+  if(sel.options.length <= 1){
+    for(const c of CHAPITRES){
+      const opt = document.createElement("option");
+      opt.value = c.code; opt.textContent = c.code + " — " + c.titre.slice(0,50);
+      sel.appendChild(opt);
+    }
+  }
+  const chap = params.c || prefs.cardChap || "all";
+  sel.value = chap; prefs.cardChap = chap; savePrefs();
+  document.getElementById("cardOpts").onclick = () => {
+    const b = document.getElementById("cardOptsBox");
+    b.style.display = b.style.display === "none" ? "block" : "none";
+  };
+  sel.onchange = () => { prefs.cardChap = sel.value; savePrefs(); renderCards({c:sel.value}); };
+  const onlyDue = document.getElementById("onlyDue");
+  onlyDue.checked = prefs.onlyDue !== false;
+  onlyDue.onchange = () => { prefs.onlyDue = onlyDue.checked; savePrefs(); renderCards({c:chap}); };
+
+  let all = await dbAll("cards");
+  if(chap !== "all") all = all.filter(c => c.chapitre === chap);
+  if(prefs.onlyDue !== false) all = all.filter(c => (c.sm2?.dueDate||0) <= Date.now());
+  for(let i=all.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [all[i],all[j]] = [all[j],all[i]]; }
+  cardQueue = all; cardIdx = 0; cardFlipped = false;
+  showCard();
+}
+function showCard(){
+  const a = document.getElementById("cardArea");
+  if(cardQueue.length === 0){
+    a.innerHTML = `<div class="card empty">
+      <div style="font-size:36px;margin-bottom:8px">🎉</div>
+      <p>Aucune carte à réviser. Bravo !</p>
+      <p class="muted" style="font-size:12.5px">Reviens demain ou désactive « seulement dues » pour réviser plus tôt.</p>
+    </div>`;
+    return;
+  }
+  if(cardIdx >= cardQueue.length){
+    a.innerHTML = `<div class="card empty">
+      <div style="font-size:36px;margin-bottom:8px">✅</div>
+      <p>Session terminée — ${cardQueue.length} cartes révisées.</p>
+      <button class="btn primary" data-go="home">Retour accueil</button>
+    </div>`;
+    bumpStreak();
+    return;
+  }
+  const c = cardQueue[cardIdx];
+  a.innerHTML = `
+    <div class="flashWrap">
+      <div class="flashCard ${cardFlipped?'flipped':''}" id="flashCard">
+        <div class="meta">${c.chapitre} · ${c.type} · ${cardIdx+1}/${cardQueue.length}</div>
+        <div class="text">${cardFlipped ? c.back : escapeHTML(c.front)}</div>
+        <div class="flashHint">${cardFlipped ? "Évalue ta réponse 👇" : "Clique pour retourner"}</div>
+      </div>
+      <div class="qualBar" id="qualBar" style="${cardFlipped?'':'visibility:hidden'}">
+        <button class="qualBtn" data-q="0">Oublié<small>0 — recommencer</small></button>
+        <button class="qualBtn" data-q="2">Difficile<small>2</small></button>
+        <button class="qualBtn" data-q="4">Bien<small>4</small></button>
+        <button class="qualBtn" data-q="5">Parfait<small>5</small></button>
+      </div>
+    </div>`;
+  document.getElementById("flashCard").onclick = () => {
+    if(!cardFlipped){ cardFlipped = true; showCard(); }
+  };
+  document.querySelectorAll(".qualBtn").forEach(b => b.onclick = () => answerCard(+b.dataset.q));
+}
+
+/* Raccourcis clavier sur flashcards : Espace = retourner ; 1/2/3/4 = qualité */
+document.addEventListener("keydown", e => {
+  if(parseHash().name !== "cards" || cardQueue.length === 0) return;
+  if(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if(e.key === " " || e.key === "Enter"){
+    e.preventDefault();
+    if(!cardFlipped){ cardFlipped = true; showCard(); }
+  } else if(cardFlipped){
+    const map = {"1":0,"2":2,"3":4,"4":5};
+    if(map[e.key] !== undefined){ e.preventDefault(); answerCard(map[e.key]); }
+  }
+});
+async function answerCard(q){
+  const c = cardQueue[cardIdx];
+  sm2Review(c, q);
+  await dbPut("cards", c);
+  await dbAdd("reviews", { cardId:c.id, q, t:Date.now(), day:todayKey() });
+  cardIdx++; cardFlipped = false; showCard();
+}
+function bumpStreak(){
+  const today = todayKey();
+  if(prefs.lastReviewDay === today) return;
+  if(prefs.lastReviewDay){
+    const d1 = new Date(prefs.lastReviewDay), d2 = new Date(today);
+    if(daysBetween(d1, d2) === 1) prefs.streak = (prefs.streak||0) + 1;
+    else if(daysBetween(d1, d2) > 1) prefs.streak = 1;
+  } else prefs.streak = 1;
+  prefs.lastReviewDay = today; savePrefs();
+}
+
+/* ============================================================
+   RENDER : QUIZ QCM
+   ============================================================ */
+let quizState = null;
+async function renderQuiz(params){
+  await ensureCardsSeeded();
+  const chap = params.c || "all";
+  let all = await dbAll("cards");
+  if(chap !== "all") all = all.filter(c => c.chapitre === chap);
+  if(all.length < 4){
+    document.getElementById("quizArea").innerHTML = `<div class="empty">Pas assez de cartes pour générer un quiz.</div>`;
+    return;
+  }
+  const n = Math.min(10, all.length);
+  const picks = [];
+  const used = new Set();
+  while(picks.length < n){
+    const i = Math.floor(Math.random()*all.length);
+    if(!used.has(i)){ used.add(i); picks.push(all[i]); }
+  }
+  const questions = picks.map(c => {
+    const distractors = all.filter(x => x.id !== c.id && x.chapitre === c.chapitre).slice(0,40);
+    const shuffled = distractors.sort(() => Math.random() - 0.5).slice(0,3);
+    const opts = [c, ...shuffled].sort(() => Math.random() - 0.5);
+    return { card:c, opts };
+  });
+  quizState = { questions, idx:0, score:0, answered:false };
+  showQuiz();
+}
+function showQuiz(){
+  const a = document.getElementById("quizArea");
+  if(!quizState) return;
+  if(quizState.idx >= quizState.questions.length){
+    a.innerHTML = `<div class="card empty">
+      <div style="font-size:30px;margin-bottom:8px">🏁</div>
+      <p>Score : <b>${quizState.score} / ${quizState.questions.length}</b></p>
+      <button class="btn primary" data-go="quiz">Recommencer</button>
+    </div>`;
+    dbAdd("scores", { type:"quiz", score:quizState.score, total:quizState.questions.length, t:Date.now() });
+    return;
+  }
+  const q = quizState.questions[quizState.idx];
+  a.innerHTML = `
+    <div class="quizCard">
+      <div class="muted" style="font-size:11.5px;margin-bottom:6px">Question ${quizState.idx+1}/${quizState.questions.length} · ${q.card.chapitre}</div>
+      <div class="quizQ">${q.card.back}</div>
+      <div id="quizOpts">${q.opts.map((o,i) => `<button class="quizOpt" data-i="${i}">${escapeHTML(o.front)}</button>`).join("")}</div>
+    </div>`;
+  document.querySelectorAll(".quizOpt").forEach(b => b.onclick = () => {
+    if(quizState.answered) return;
+    quizState.answered = true;
+    const correct = q.opts[+b.dataset.i].id === q.card.id;
+    if(correct){ quizState.score++; b.classList.add("correct"); }
+    else { b.classList.add("wrong");
+      document.querySelectorAll(".quizOpt").forEach((x,i) => { if(q.opts[i].id === q.card.id) x.classList.add("correct"); });
+    }
+    setTimeout(() => { quizState.idx++; quizState.answered = false; showQuiz(); }, 1100);
+  });
+}
+
+/* ============================================================
+   RENDER : METHODO chronométré
+   ============================================================ */
+let methTimer = null;
+function renderMethodo(params){
+  const t = params.t || "ec1";
+  const m = METHODO[t]; if(!m){ document.getElementById("methBody").innerHTML = `<div class="empty">Module inconnu.</div>`; return; }
+  document.getElementById("methTitle").textContent = m.titre;
+  const draftKey = "ses2026.draft." + t;
+  const saved = localStorage.getItem(draftKey) || "";
+  const exemple = m.exemples[Math.floor(Math.random()*m.exemples.length)];
+  const body = document.getElementById("methBody");
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><div class="muted" style="font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase">Sujet aléatoire</div>
+          <div style="font-size:15px;font-weight:600;margin-top:4px">${escapeHTML(exemple)}</div></div>
+        <div style="text-align:right"><div class="muted" style="font-size:11.5px">Durée conseillée</div>
+          <div class="timer" id="methTimer">${fmtTime(m.duree*60)}</div></div>
+      </div>
+      <div class="row mt" style="gap:8px">
+        <button class="btn primary" id="methStart">Démarrer</button>
+        <button class="btn" id="methPause">Pause</button>
+        <button class="btn" id="methReset">Reset</button>
+        <button class="btn ghost" id="methNew">Autre sujet</button>
+      </div>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Conseils</h4>
+      <ul>${m.conseils.map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul>
+      ${m.formules?`<h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:14px 0 6px">Formules clés</h4>
+        <ul>${m.formules.map(x=>`<li><code>${escapeHTML(x)}</code></li>`).join("")}</ul>`:""}
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Ta copie (sauvegarde auto)</h4>
+      <textarea class="copyArea" id="methCopy" placeholder="Écris ici…">${escapeHTML(saved)}</textarea>
+      <div class="row mt" style="gap:8px">
+        <button class="btn" id="methExport">📥 Exporter (.txt)</button>
+        <button class="btn" id="methClear">🗑️ Effacer</button>
+      </div>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Auto-évaluation</h4>
+      <div class="checklist">
+        ${m.critères.map((cr,i)=>`<label><input type="checkbox" data-cri="${i}"> ${escapeHTML(cr)}</label>`).join("")}
+      </div>
+      <button class="btn primary mt" id="methSubmit">Valider ma session</button>
+    </div>`;
+
+  const ta = document.getElementById("methCopy");
+  let saveTimer = null;
+  ta.oninput = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => localStorage.setItem(draftKey, ta.value), 800);
+  };
+  document.getElementById("methExport").onclick = () => {
+    const blob = new Blob([ta.value], {type:"text/plain;charset=utf-8"});
+    downloadBlob(blob, t + "_" + Date.now() + ".txt");
+  };
+  document.getElementById("methClear").onclick = () => {
+    if(confirm("Effacer ta copie ?")){ ta.value = ""; localStorage.removeItem(draftKey); }
+  };
+  document.getElementById("methNew").onclick = () => renderMethodo({t});
+
+  let secs = m.duree * 60, paused = true;
+  const update = () => {
+    const el = document.getElementById("methTimer");
+    if(!el) return;
+    el.textContent = fmtTime(Math.max(0,secs));
+    el.className = "timer" + (secs < 300 ? " danger" : secs < 600 ? " warn" : "");
+  };
+  update();
+  if(methTimer) clearInterval(methTimer);
+  methTimer = setInterval(() => { if(!paused){ secs--; update(); if(secs<=0){ paused = true; toast("⏰ Temps écoulé !"); } } }, 1000);
+  document.getElementById("methStart").onclick = () => { paused = false; toast("⏱️ Chrono démarré"); };
+  document.getElementById("methPause").onclick = () => { paused = !paused; toast(paused?"⏸️ Pause":"▶️ Reprise"); };
+  document.getElementById("methReset").onclick = () => { secs = m.duree*60; paused = true; update(); };
+  document.getElementById("methSubmit").onclick = () => {
+    const checked = document.querySelectorAll(".checklist input:checked").length;
+    const total = m.critères.length;
+    dbAdd("scores", { type:t, criteres:checked, total, t:Date.now(), draft:ta.value.length });
+    toast("Session validée — " + checked + "/" + total + " critères auto-évalués.");
+  };
+}
+
+function downloadBlob(blob, name){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+
+/* ============================================================
+   RENDER : EXAMEN BLANC 4h
+   ============================================================ */
+let examTimer = null;
+function renderExam(){
+  const body = document.getElementById("examBody");
+  const subjects = ANNALES.filter(a => a.type === "Dissertation" || a.type === "EC3");
+  const draftKey = "ses2026.examDraft";
+  const saved = localStorage.getItem(draftKey) || "";
+  const subjId = +(localStorage.getItem("ses2026.examSubj") || Math.floor(Math.random()*subjects.length));
+  const subj = subjects[subjId % subjects.length];
+  body.innerHTML = `
+    <div class="card">
+      <div class="muted" style="font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase">Sujet tiré au sort</div>
+      <div style="font-size:16px;font-weight:600;margin:6px 0">${escapeHTML(subj.sujet)}</div>
+      <div class="row" style="gap:6px"><span class="chip alt">${escapeHTML(subj.ann)}</span>
+        <span class="chip">${escapeHTML(subj.type)}</span>${subj.chap.map(ch=>`<span class="chip info">${ch}</span>`).join("")}</div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="muted" style="font-size:11.5px">Temps restant</div>
+        <div class="timer" id="examTimer">04:00:00</div>
+      </div>
+      <div class="row mt" style="gap:8px">
+        <button class="btn primary" id="examStart">Démarrer 4 h</button>
+        <button class="btn" id="examPause">Pause</button>
+        <button class="btn ghost" id="examNew">Nouveau sujet</button>
+      </div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Alarmes à 1 h, 2 h, 3 h, 3 h 30, 3 h 50.</p>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Brouillon + copie (sauvegarde auto 5 s)</h4>
+      <textarea class="copyArea" id="examCopy" style="min-height:480px" placeholder="Brouillon, plan, copie…">${escapeHTML(saved)}</textarea>
+      <div class="row mt" style="gap:8px">
+        <button class="btn" id="examExport">📥 Exporter copie</button>
+        <button class="btn danger" id="examEnd">Terminer</button>
+      </div>
+    </div>`;
+
+  const ta = document.getElementById("examCopy");
+  setInterval(() => { localStorage.setItem(draftKey, ta.value); }, 5000);
+  document.getElementById("examExport").onclick = () => {
+    const blob = new Blob([
+      "BAC SES — EXAMEN BLANC\n=========================\n\nSujet : " + subj.sujet + "\n\n" + ta.value
+    ], {type:"text/plain"});
+    downloadBlob(blob, "exam_blanc_" + Date.now() + ".txt");
+  };
+  document.getElementById("examEnd").onclick = () => {
+    if(!confirm("Terminer ta session d'examen blanc ?")) return;
+    dbAdd("exams", { sujet:subj.sujet, draft:ta.value, t:Date.now(), durée:14400 - secs });
+    toast("Examen sauvegardé.");
+  };
+  document.getElementById("examNew").onclick = () => {
+    localStorage.setItem("ses2026.examSubj", String(Math.floor(Math.random()*subjects.length)));
+    renderExam();
+  };
+
+  let secs = 14400, paused = true;
+  const alarms = [3*3600, 2*3600, 3600, 1800, 600], fired = new Set();
+  const update = () => {
+    const el = document.getElementById("examTimer"); if(!el) return;
+    el.textContent = fmtTime(Math.max(0,secs));
+    el.className = "timer" + (secs < 600 ? " danger" : secs < 1800 ? " warn" : "");
+    for(const a of alarms){
+      if(secs <= a && !fired.has(a)){ fired.add(a); toast("⏰ Plus que " + fmtTime(a) + " !"); }
+    }
+  };
+  update();
+  if(examTimer) clearInterval(examTimer);
+  examTimer = setInterval(() => { if(!paused){ secs--; update(); if(secs<=0){ paused = true; toast("⏰ Temps écoulé"); } } }, 1000);
+  document.getElementById("examStart").onclick = () => { paused = false; toast("🚦 4 h démarrées — bon courage !"); };
+  document.getElementById("examPause").onclick = () => { paused = !paused; toast(paused?"⏸️ Pause":"▶️"); };
+}
+
+/* ============================================================
+   RENDER : PLANNING ADAPTATIF
+   ============================================================ */
+function renderPlanning(){
+  const body = document.getElementById("planBody");
+  const target = new Date(prefs.examDate + "T08:00:00");
+  const now = new Date();
+  const days = Math.max(1, Math.ceil((target - now)/86400000));
+  const months = Math.max(1, Math.ceil(days/30));
+  const phase =
+    days > 180 ? {nom:"Encodage", desc:"1 chapitre / semaine. Lecture + flashcards créées au fur et à mesure.", mins:30} :
+    days > 120 ? {nom:"Consolidation", desc:"Flashcards quotidiennes + 1 DST par mois.", mins:45} :
+    days > 60  ? {nom:"Méthodo intensive", desc:"1 dissertation + 1 EC complète par quinzaine.", mins:60} :
+    days > 30  ? {nom:"Examens blancs", desc:"2 examens blancs 4 h ce mois. Analyse par grille.", mins:75} :
+    days > 14  ? {nom:"Annales", desc:"Annales 2022-2025 chronométrées. Flashcards 30 min/jour.", mins:60} :
+                 {nom:"Sprint final", desc:"Relecture des fiches + sommeil régulier (gain ~1,7 pt à 7 h vs 6 h).", mins:30};
+  const week = ["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+  const today = new Date().getDay();
+  const ecrits = CHAPITRES.filter(c => c.evaluableEcrit2026).map(c => c.code);
+  const sched = week.map((d,i) => {
+    const k = ecrits[(i + today) % ecrits.length];
+    return { jour:d, chap:k, type: i%2 ? "Flashcards + EC1" : "Cours + flashcards" };
+  });
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><div>
+        <div class="muted" style="font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase">Phase actuelle</div>
+        <div style="font-size:18px;font-weight:700;margin-top:2px">${phase.nom}</div>
+        <p class="muted" style="margin:4px 0 0;font-size:13px">${phase.desc}</p></div>
+      <div style="text-align:right"><div style="font-size:24px;font-weight:800">J-${days}</div>
+        <div class="muted" style="font-size:11px">~${months} mois</div></div></div>
+      <div class="row mt"><span class="chip">~${phase.mins} min/jour conseillé</span>
+        <span class="chip">Examen : ${prefs.examDate}</span></div>
+    </div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Cette semaine</h4>
+      ${sched.map(s => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line)">
+        <div><b>${s.jour}</b> <span class="muted" style="font-size:12.5px">${s.type}</span></div>
+        <button class="btn ghost" data-go="chapitre&c=${s.chap}" style="padding:4px 10px;font-size:12px">${s.chap}</button></div>`).join("")}</div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Réglages</h4>
+      <label>Date d'examen : <input type="date" id="planDate" value="${prefs.examDate}" class="btn"></label>
+      <label class="mt" style="display:block">Minutes/jour : <input type="number" id="planMin" min="15" max="240" value="${prefs.dailyMinutes}" class="btn" style="width:100px"></label></div>`;
+  document.getElementById("planDate").onchange = e => { prefs.examDate = e.target.value; savePrefs(); updateCountdown(); renderPlanning(); };
+  document.getElementById("planMin").onchange = e => { prefs.dailyMinutes = +e.target.value; savePrefs(); };
+}
+
+/* ============================================================
+   RENDER : STATS + heatmap
+   ============================================================ */
+async function renderStats(){
+  const body = document.getElementById("statsBody");
+  const reviews = await dbAll("reviews");
+  const scores = await dbAll("scores");
+  const cards = await dbAll("cards");
+  const learned = cards.filter(c => (c.sm2?.interval||0) >= 21).length;
+  const total = cards.length;
+  const days = {};
+  for(const r of reviews) days[r.day] = (days[r.day]||0) + 1;
+
+  const D = 7*16;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const cells = [];
+  for(let i=D-1;i>=0;i--){
+    const d = new Date(today.getTime() - i*86400000);
+    const k = d.toISOString().slice(0,10);
+    cells.push({ k, n:days[k]||0 });
+  }
+  const max = Math.max(1, ...cells.map(c => c.n));
+  const cw = 14, gap = 2;
+  let svg = `<svg width="${(cw+gap)*16}" height="${(cw+gap)*7}" class="heatmap">`;
+  cells.forEach((c,i) => {
+    const col = Math.floor(i/7), row = i%7;
+    const intensity = c.n === 0 ? .12 : .25 + (c.n/max)*.65;
+    svg += `<rect x="${col*(cw+gap)}" y="${row*(cw+gap)}" width="${cw}" height="${cw}" rx="2" fill="rgba(124,197,255,${intensity})"><title>${c.k} : ${c.n} cartes</title></rect>`;
+  });
+  svg += `</svg>`;
+
+  const perChap = {};
+  for(const c of cards){ perChap[c.chapitre] = perChap[c.chapitre] || {tot:0,ok:0}; perChap[c.chapitre].tot++; if((c.sm2?.interval||0) >= 21) perChap[c.chapitre].ok++; }
+  const chapHTML = CHAPITRES.map(ch => {
+    const p = perChap[ch.code] || {tot:0,ok:0};
+    const pct = p.tot ? Math.round(p.ok/p.tot*100) : 0;
+    return `<div style="margin:8px 0">
+      <div class="row" style="justify-content:space-between"><span style="font-size:13px"><b>${ch.code}</b> ${escapeHTML(ch.titre.slice(0,55))}…</span>
+        <span class="muted" style="font-size:12px">${p.ok}/${p.tot}</span></div>
+      <div class="bar-h"><div style="width:${pct}%"></div></div></div>`;
+  }).join("");
+
+  body.innerHTML = `
+    <div class="card">
+      <div class="row" style="gap:18px">
+        <div><div style="font-size:24px;font-weight:800">${prefs.streak||0}</div><div class="muted" style="font-size:12px">jours consécutifs</div></div>
+        <div><div style="font-size:24px;font-weight:800">${reviews.length}</div><div class="muted" style="font-size:12px">cartes révisées (total)</div></div>
+        <div><div style="font-size:24px;font-weight:800">${learned}/${total}</div><div class="muted" style="font-size:12px">maîtrisées</div></div>
+        <div><div style="font-size:24px;font-weight:800">${scores.length}</div><div class="muted" style="font-size:12px">sessions méthodo</div></div>
+      </div>
+    </div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Heatmap (16 dernières semaines)</h4>${svg}</div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Maîtrise par chapitre</h4>${chapHTML}</div>`;
+}
+
+/* ============================================================
+   RENDER : ANNALES
+   ============================================================ */
+function renderAnnales(){
+  const body = document.getElementById("annalesBody");
+  body.innerHTML = ANNALES.map(annaleCard).join("");
+}
+
+/* ============================================================
+   RENDER : SETTINGS
+   ============================================================ */
+function renderSettings(){
+  const body = document.getElementById("settingsBody");
+  body.innerHTML = `
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Apparence</h4>
+      <div class="row"><b>Thème :</b>
+        <button class="btn" data-th="dark">🌙 Sombre</button>
+        <button class="btn" data-th="light">☀️ Clair</button></div>
+      <div class="row mt"><b>Police :</b>
+        <button class="btn" data-fz="s">A−</button>
+        <button class="btn" data-fz="m">A</button>
+        <button class="btn" data-fz="l">A+</button>
+        <button class="btn" data-fz="xl">A++</button></div>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Sauvegarde</h4>
+      <p class="muted" style="font-size:13px">Tes données sont stockées localement (IndexedDB + localStorage). Exporte régulièrement — surtout sur iPhone (iOS efface après 7 j d'inactivité).</p>
+      <div class="row"><button class="btn primary" id="exportBtn">📥 Exporter JSON</button>
+        <label class="btn">📤 Importer<input type="file" id="importFile" accept="application/json" style="display:none"></label>
+        <button class="btn danger" id="resetBtn">🗑️ Tout réinitialiser</button></div>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">PWA</h4>
+      <button class="btn" id="installBtn" disabled>📲 Installer l'app</button>
+      <p class="muted" style="font-size:12.5px;margin-top:8px">Sur Android Chrome : « Ajouter à l'écran d'accueil ». Sur iOS Safari : Partager → « Sur l'écran d'accueil ». L'app fonctionne hors-ligne après la 1ère visite.</p>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Sources et choix techniques</h4>
+      <p style="font-size:13px;margin:6px 0">📘 Programme : ${escapeHTML(PROGRAMME_META.sourceBO)}.</p>
+      <p style="font-size:13px;margin:6px 0">⚖️ Coef écrit ${PROGRAMME_META.coefficientEcrit} · Coef oral ${PROGRAMME_META.coefficientOral} · Durée ${PROGRAMME_META.dureeEcrit} min.</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:8px 0">SM-2 (Wozniak 1990) plutôt que Leitner (moins efficace) ou FSRS (~700 lignes, surdimensionné). localStorage pour prefs, IndexedDB pour cartes/scores. Une seule SPA HTML/CSS/JS, 0 dépendance, 0 build.</p>
+    </div>`;
+  document.querySelectorAll("[data-th]").forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; savePrefs(); applyTheme(); });
+  document.querySelectorAll("[data-fz]").forEach(b => b.onclick = () => { prefs.fz = b.dataset.fz; savePrefs(); applyTheme(); });
+  document.getElementById("exportBtn").onclick = exportData;
+  document.getElementById("importFile").onchange = importData;
+  document.getElementById("resetBtn").onclick = async () => {
+    if(!confirm("Tout effacer (cartes, prefs, scores) ?")) return;
+    localStorage.clear(); await dbClear("cards"); await dbClear("scores"); await dbClear("exams"); await dbClear("reviews");
+    location.reload();
+  };
+  if(window._installEvt){
+    const b = document.getElementById("installBtn");
+    b.disabled = false;
+    b.onclick = () => { window._installEvt.prompt(); };
+  }
+}
+
+async function exportData(){
+  const data = {
+    version:2, exportedAt:new Date().toISOString(),
+    prefs, cards: await dbAll("cards"), scores: await dbAll("scores"),
+    exams: await dbAll("exams"), reviews: await dbAll("reviews")
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  downloadBlob(blob, "bac-ses-backup-" + new Date().toISOString().slice(0,10) + ".json");
+  toast("Sauvegarde téléchargée.");
+}
+async function importData(e){
+  const f = e.target.files[0]; if(!f) return;
+  try{
+    const txt = await f.text();
+    const data = JSON.parse(txt);
+    if(data.prefs){ prefs = Object.assign({}, defaultPrefs, data.prefs); savePrefs(); }
+    if(Array.isArray(data.cards)) for(const c of data.cards) await dbPut("cards", c);
+    if(Array.isArray(data.scores)) for(const s of data.scores) try{ await dbAdd("scores", s); }catch{}
+    if(Array.isArray(data.reviews)) for(const r of data.reviews) try{ await dbAdd("reviews", r); }catch{}
+    toast("Import réussi.");
+    setTimeout(()=>location.reload(), 800);
+  }catch(err){ toast("Échec import : " + err.message); }
+}
+
+/* ============================================================
+   CALCUL MENTAL EC2 — calculatrice interdite
+   ============================================================ */
+function genCalcQ(){
+  const types = ["tv","coef","part","tcam","indice"];
+  const t = types[Math.floor(Math.random()*types.length)];
+  const round = (n,d=1) => Math.round(n*Math.pow(10,d))/Math.pow(10,d);
+  if(t === "tv"){
+    const vi = 50 + Math.floor(Math.random()*450);
+    const tv = -30 + Math.floor(Math.random()*60);
+    const vf = Math.round(vi * (1 + tv/100));
+    return { q:`Une grandeur passe de ${vi} à ${vf}. Calcule le taux de variation (en %).`,
+      a: round((vf-vi)/vi*100, 1), unite:"%", aide:"TV = (Vf − Vi)/Vi × 100" };
+  }
+  if(t === "coef"){
+    const vi = 100 + Math.floor(Math.random()*200);
+    const k = (10 + Math.floor(Math.random()*40))/10;
+    return { q:`Une grandeur passe de ${vi} à ${Math.round(vi*k)}. Coefficient multiplicateur ?`,
+      a: round(k, 2), unite:"×", aide:"k = Vf / Vi" };
+  }
+  if(t === "part"){
+    const tot = 1000 + Math.floor(Math.random()*9000);
+    const part = 50 + Math.floor(Math.random()*Math.floor(tot*0.6));
+    return { q:`Une catégorie représente ${part} sur un total de ${tot}. Part en % ?`,
+      a: round(part/tot*100, 1), unite:"%", aide:"Part = Catégorie / Total × 100" };
+  }
+  if(t === "tcam"){
+    const n = 2 + Math.floor(Math.random()*5);
+    const r = (1 + (1 + Math.floor(Math.random()*8))/100);
+    const vf = 100, vi = vf / Math.pow(r, n);
+    return { q:`Une grandeur passe de ${round(vi,0)} à ${vf} en ${n} ans. Taux de croissance annuel moyen ?`,
+      a: round((Math.pow(vf/vi, 1/n) - 1)*100, 1), unite:"%", aide:"TCAM = (Vf/Vi)^(1/n) − 1" };
+  }
+  // indice
+  const base = 100;
+  const tv = -20 + Math.floor(Math.random()*40);
+  return { q:`Avec un indice base 100, l'indice atteint ${100+tv}. Évolution en % ?`,
+    a: round(tv, 1), unite:"%", aide:"Évolution = Indice − 100 (si base 100)" };
+}
+let calcStreak = 0, calcTotal = 0, calcRight = 0, calcTimer = null, calcSec = 300;
+function renderCalc(){
+  calcSec = 300; calcStreak = 0; calcTotal = 0; calcRight = 0;
+  if(calcTimer) clearInterval(calcTimer);
+  const body = document.getElementById("calcBody");
+  body.innerHTML = `
+    <div class="card">
+      <p class="muted" style="margin:0;font-size:13px">⚠️ <b>Calculatrice interdite à l'écrit.</b> 5 minutes de drill = 2-4 points sur l'EC2 le jour J.</p>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><div class="muted" style="font-size:11.5px">Score</div><div style="font-size:22px;font-weight:800" id="calcScore">0 / 0</div></div>
+        <div style="text-align:right"><div class="muted" style="font-size:11.5px">Temps</div><div class="timer" id="calcT">5:00</div></div>
+      </div>
+    </div>
+    <div class="card" id="calcCard"></div>
+    <div class="row"><button class="btn primary full" id="calcStart">Démarrer 5 min</button></div>`;
+  let q = null;
+  const next = () => {
+    q = genCalcQ();
+    document.getElementById("calcCard").innerHTML = `
+      <div style="font-size:16px;font-weight:600;margin-bottom:10px">${escapeHTML(q.q)}</div>
+      <div class="row" style="gap:8px">
+        <input type="text" inputmode="decimal" id="calcInput" class="btn" style="flex:1;text-align:center;font-size:18px" placeholder="Ta réponse">
+        <button class="btn primary" id="calcOk">OK</button>
+      </div>
+      <div class="muted" style="font-size:12px;margin-top:8px">💡 ${escapeHTML(q.aide)}</div>`;
+    const inp = document.getElementById("calcInput"); inp.focus();
+    inp.addEventListener("keydown", e => { if(e.key === "Enter") check(); });
+    document.getElementById("calcOk").onclick = check;
+  };
+  const check = () => {
+    if(!q) return;
+    const v = parseFloat(document.getElementById("calcInput").value.replace(",","."));
+    calcTotal++;
+    const ok = !isNaN(v) && Math.abs(v - q.a) <= 0.5;
+    if(ok){ calcRight++; calcStreak++; toast("✅ +" + (calcStreak>=3?"2 (série!)":"1")); }
+    else { calcStreak = 0; toast("❌ Réponse : " + q.a + " " + q.unite); }
+    document.getElementById("calcScore").textContent = calcRight + " / " + calcTotal;
+    next();
+  };
+  document.getElementById("calcStart").onclick = () => {
+    next();
+    calcTimer = setInterval(() => {
+      calcSec--;
+      const el = document.getElementById("calcT"); if(!el){ clearInterval(calcTimer); return; }
+      const m = Math.floor(calcSec/60), s = calcSec%60;
+      el.textContent = m + ":" + (s<10?"0":"") + s;
+      el.className = "timer" + (calcSec<60?" danger":calcSec<120?" warn":"");
+      if(calcSec <= 0){
+        clearInterval(calcTimer);
+        document.getElementById("calcCard").innerHTML =
+          `<div style="text-align:center"><div style="font-size:32px;margin-bottom:6px">🏁</div>
+          <p>Score final : <b>${calcRight} / ${calcTotal}</b></p>
+          <p class="muted" style="font-size:13px">${calcRight/Math.max(1,calcTotal)>=.7?"Bravo, niveau Bac.":"Continue à drill — vise > 70 %."}</p>
+          <button class="btn primary" id="calcAgain">Recommencer</button></div>`;
+        document.getElementById("calcAgain").onclick = renderCalc;
+        dbAdd("scores", { type:"calc", score:calcRight, total:calcTotal, t:Date.now() });
+      }
+    }, 1000);
+  };
+}
+
+/* ============================================================
+   GRAND ORAL — coef 10 voie générale en 2026
+   Préparation des 2 questions, timer 5+10, conseils.
+   ============================================================ */
+const ORAL_TIPS = {
+  structure: [
+    "<b>5 min</b> exposé debout — commencer par expliquer le choix de la question, puis répondre.",
+    "<b>10 min</b> échange avec le jury (questions, lien parcours).",
+    "<b>5 min</b> discussion sur le projet d'orientation post-bac.",
+    "Note brouillon autorisée mais NON évaluée — appui visuel possible mais pas de lecture."
+  ],
+  posture: [
+    "Se lever en début d'oral (depuis 2024, attendu officiel).",
+    "Regard balayé sur le jury (3 personnes : 1 prof spé, 1 autre discipline, 1 président).",
+    "Voix : pose, articulation, débit ~150 mots/min.",
+    "Bras ouverts, pas de bras croisés, pas de mains dans les poches."
+  ],
+  criteres: [
+    "Qualité orale (voix, débit, posture).",
+    "Qualité de la prise de parole en continu.",
+    "Qualité des connaissances mobilisées.",
+    "Qualité de l'interaction avec le jury.",
+    "Construction de l'argumentation."
+  ]
+};
+function renderOral(){
+  const body = document.getElementById("oralBody");
+  const k = "ses2026.oral";
+  const data = JSON.parse(localStorage.getItem(k) || '{"q1":"","q2":"","plan1":"","plan2":""}');
+  body.innerHTML = `
+    <div class="card">
+      <p style="margin:0"><b>Coefficient ${PROGRAMME_META.coefficientOral}</b> · 20 min prép + 20 min passage · ${escapeHTML(PROGRAMME_META.dateOral)}</p>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Tes 2 questions</h4>
+      <label class="muted" style="font-size:12px">Question 1 (signée par le prof)</label>
+      <textarea class="copyArea" id="oQ1" style="min-height:60px;margin-top:4px" placeholder="Ex : « Comment l'engagement politique se transforme-t-il à l'ère numérique ? »">${escapeHTML(data.q1)}</textarea>
+      <label class="muted" style="font-size:12px;margin-top:10px;display:block">Question 2</label>
+      <textarea class="copyArea" id="oQ2" style="min-height:60px;margin-top:4px">${escapeHTML(data.q2)}</textarea>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Plan d'exposé Q1 (5 min)</h4>
+      <textarea class="copyArea" id="oP1" style="min-height:160px" placeholder="Accroche / Pourquoi cette question / Annonce / I... / II... / Conclusion">${escapeHTML(data.plan1)}</textarea>
+    </div>
+    <div class="card">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Plan d'exposé Q2</h4>
+      <textarea class="copyArea" id="oP2" style="min-height:160px">${escapeHTML(data.plan2)}</textarea>
+    </div>
+    <div class="card">
+      <div class="row"><button class="btn primary" id="oralStart">⏱️ Simuler 5 min exposé</button>
+        <button class="btn" id="oralStart2">⏱️ Simuler 10 min échange</button></div>
+      <div class="timer" id="oralTimer" style="margin-top:8px">5:00</div>
+    </div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Structure officielle</h4>
+      <ul>${ORAL_TIPS.structure.map(x=>`<li>${x}</li>`).join("")}</ul></div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Posture & voix</h4>
+      <ul>${ORAL_TIPS.posture.map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul></div>
+    <div class="card"><h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Critères d'évaluation officiels</h4>
+      <ul>${ORAL_TIPS.criteres.map(x=>`<li>${escapeHTML(x)}</li>`).join("")}</ul></div>`;
+  const save = () => localStorage.setItem(k, JSON.stringify({
+    q1:document.getElementById("oQ1").value, q2:document.getElementById("oQ2").value,
+    plan1:document.getElementById("oP1").value, plan2:document.getElementById("oP2").value
+  }));
+  ["oQ1","oQ2","oP1","oP2"].forEach(id => document.getElementById(id).oninput = save);
+  let oTimer = null;
+  const startTimer = (secs) => {
+    if(oTimer) clearInterval(oTimer);
+    let s = secs;
+    const el = document.getElementById("oralTimer");
+    const upd = () => { const m = Math.floor(s/60); el.textContent = m + ":" + (s%60<10?"0":"") + (s%60); el.className = "timer" + (s<30?" danger":s<60?" warn":""); };
+    upd();
+    oTimer = setInterval(()=>{ s--; upd(); if(s<=0){ clearInterval(oTimer); toast("⏰ Temps écoulé"); } }, 1000);
+  };
+  document.getElementById("oralStart").onclick = () => { startTimer(300); toast("🎤 5 min — vas-y debout, je t'écoute."); };
+  document.getElementById("oralStart2").onclick = () => { startTimer(600); toast("💬 10 min échange — anticipe les questions."); };
+}
+
+/* ============================================================
+   VERBES DE CONSIGNE — éviter les pièges de jury
+   ============================================================ */
+const VERBES = [
+ {v:"Montrez", attendu:"Apporter des arguments + exemples qui prouvent une thèse donnée.", piege:"Ne PAS débattre — la thèse est à valider, pas à discuter.", ex:"Montrez que l'École reproduit les inégalités sociales."},
+ {v:"Expliquez", attendu:"Décrire un mécanisme causal pas à pas (parce que → donc → ce qui entraîne…).", piege:"Ne pas se contenter de définir : montrer la chaîne logique.", ex:"Expliquez comment le progrès technique soutient la croissance."},
+ {v:"Distinguez", attendu:"Mettre en évidence des différences claires entre 2 notions/phénomènes.", piege:"Ne pas se contenter de définir les deux séparément — il faut comparer.", ex:"Distinguez mobilité observée et fluidité sociale."},
+ {v:"Illustrez", attendu:"Donner au moins un exemple concret, daté et précis.", piege:"Un exemple vague (« par exemple en France ») ne compte pas.", ex:"Illustrez à l'aide d'un exemple le rôle des FMN."},
+ {v:"Comparez", attendu:"Présenter points communs ET différences entre 2 objets.", piege:"Plan thématique recommandé (par dimension) plutôt qu'objet par objet.", ex:"Comparez les politiques actives et passives de l'emploi."},
+ {v:"Présentez", attendu:"Décrire les caractéristiques principales (souvent un dispositif, une politique, un indicateur).", piege:"Ne pas dériver vers une analyse — rester descriptif.", ex:"Présentez les outils d'action publique pour l'environnement."},
+ {v:"Caractérisez", attendu:"Identifier les traits distinctifs (souvent quantifiés).", piege:"Mobiliser des chiffres et des comparaisons.", ex:"Caractérisez la mobilité sociale en France aujourd'hui."},
+ {v:"À l'aide d'un exemple", attendu:"Un seul exemple suffit, mais il doit être DÉVELOPPÉ (qui, quoi, quand, conséquence).", piege:"Un nom seul ne suffit pas — déployer.", ex:"À l'aide d'un exemple, montrez l'effet des incitations sélectives."},
+ {v:"Pourquoi peut-on dire que…", attendu:"Justifier une affirmation par 2-3 arguments + illustrations.", piege:"Ne pas remettre en cause l'affirmation.", ex:"Pourquoi peut-on dire que le PIB ne suffit pas à mesurer le bien-être ?"}
+];
+function renderVerbes(){
+  const body = document.getElementById("verbesBody");
+  body.innerHTML = `
+    <div class="card">
+      <p style="margin:0"><b>Lis-le 5 minutes avant chaque EC.</b> Confondre <i>montrez</i> et <i>expliquez</i> coûte 1-2 points — erreur N°1 des rapports de jury.</p>
+    </div>` + VERBES.map(v => `
+    <div class="card">
+      <h3 style="margin:0;color:var(--accent)">${escapeHTML(v.v)}</h3>
+      <p style="margin:6px 0 0;font-size:13.5px"><b>Attendu :</b> ${escapeHTML(v.attendu)}</p>
+      <p style="margin:6px 0 0;font-size:13.5px;color:#fbbf24"><b>⚠️ Piège :</b> ${escapeHTML(v.piege)}</p>
+      <p class="muted" style="margin:6px 0 0;font-size:12.5px;font-style:italic">Ex : « ${escapeHTML(v.ex)} »</p>
+    </div>`).join("");
+}
+
+/* ============================================================
+   PWA — service worker + offline
+   ============================================================ */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(err => console.warn("SW :", err));
+  });
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window._installEvt = e; });
+function syncOnline(){ document.body.classList.toggle("offline-mode", !navigator.onLine); }
+window.addEventListener("online", syncOnline); window.addEventListener("offline", syncOnline);
+syncOnline();
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init(){
+  try { await openDB(); } catch(e){ console.warn("IndexedDB indisponible :", e); }
+  migrateV1();
+  await ensureCardsSeeded();
+  updateCountdown();
+  setInterval(updateCountdown, 60000);
+  if(!location.hash) location.hash = "#/home";
+  navigate();
+}
+init();
+</script>
+</body>
+</html>
+
+
+

@@ -384,6 +384,28 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
 /* Toast plus chaleureux */
 .toast{font-weight:500}
 
+/* Widget profil dans le drawer */
+.profPill{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,rgba(246,200,144,.14),rgba(155,140,255,.14));
+  border:1px solid rgba(246,200,144,.30);
+  border-radius:12px;padding:10px 12px;margin:4px 4px 14px;cursor:pointer
+}
+.profPill:hover{background:linear-gradient(135deg,rgba(246,200,144,.20),rgba(155,140,255,.20))}
+
+/* Cartes profils dans Settings */
+.profRow{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:8px
+}
+.profRow.active{border-color:rgba(246,200,144,.55);background:linear-gradient(135deg,rgba(246,200,144,.10),rgba(155,140,255,.08))}
+.profRow .em{font-size:22px;width:32px;text-align:center}
+.profRow .nm{flex:1;min-width:0}
+.profRow .nm b{font-size:14px;display:block}
+.profRow .nm small{color:var(--muted);font-size:11.5px}
+.profRow .actions{display:flex;gap:4px}
+.profRow .actions button{padding:5px 9px;font-size:11.5px;min-height:32px}
+
 /* search */
 .searchBox{
   display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
@@ -409,6 +431,7 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
 
 <div class="drawer" id="drawer" aria-hidden="true">
   <div class="drawer-inner">
+    <div id="profileWidget"></div>
     <h2>Navigation</h2>
     <button class="navItem" data-go="home"><span class="ico">🏠</span>Accueil</button>
     <button class="navItem" data-go="programme"><span class="ico">📚</span>Programme</button>
@@ -597,8 +620,40 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
 /* ============================================================
    STATE — observable via Proxy minimal
    ============================================================ */
-const PREFS_KEY = "ses2026.prefs";
+const PREFS_KEY_OLD = "ses2026.prefs"; // ancienne clé mono-profil → migrée
 const V1_KEY = "bac-ses-state-v1";
+const PROFILES_KEY = "ses2026.profiles";
+const ACTIVE_KEY = "ses2026.activeProfile";
+
+/* ============================================================
+   PROFILS — multi-comptes sur le même appareil
+   Chaque profil a sa propre progression, sync cloud, prénom, mots de papa.
+   ============================================================ */
+function getProfiles(){
+  try{ return JSON.parse(localStorage.getItem(PROFILES_KEY)) || []; }catch{ return []; }
+}
+function setProfiles(list){ localStorage.setItem(PROFILES_KEY, JSON.stringify(list)); }
+function getActiveId(){ return localStorage.getItem(ACTIVE_KEY) || "default"; }
+function setActiveId(id){ localStorage.setItem(ACTIVE_KEY, id); }
+function activeProfile(){ return getProfiles().find(p => p.id === getActiveId()) || null; }
+function profilePrefsKey(id){ return "ses2026.prefs." + id; }
+function profileSnapshotKey(id){ return "ses2026.snapshot." + id; }
+function newProfileId(){ return "p" + Math.random().toString(36).slice(2, 8); }
+
+function migrateProfiles(){
+  if(localStorage.getItem(PROFILES_KEY)) return; // déjà migré
+  // Si un user existait déjà en mono-profil, on transfère ses données vers "default"
+  const oldPrefs = localStorage.getItem(PREFS_KEY_OLD);
+  if(oldPrefs){
+    localStorage.setItem(profilePrefsKey("default"), oldPrefs);
+    localStorage.removeItem(PREFS_KEY_OLD);
+  }
+  // Crée le profil "default"
+  const profiles = [{ id:"default", name:"Profil principal", emoji:"💛", createdAt: Date.now() }];
+  setProfiles(profiles);
+  setActiveId("default");
+}
+migrateProfiles();
 const defaultPrefs = {
   theme:"dark", fz:"m",
   examDate:"2026-06-16",
@@ -619,12 +674,12 @@ let prefs = loadPrefs();
 
 function loadPrefs(){
   try{
-    const raw = localStorage.getItem(PREFS_KEY);
+    const raw = localStorage.getItem(profilePrefsKey(getActiveId()));
     if(raw) return Object.assign({}, defaultPrefs, JSON.parse(raw));
   }catch(e){}
   return Object.assign({}, defaultPrefs);
 }
-function savePrefs(){ localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)); }
+function savePrefs(){ localStorage.setItem(profilePrefsKey(getActiveId()), JSON.stringify(prefs)); }
 
 function applyTheme(){
   document.documentElement.dataset.theme = prefs.theme;
@@ -2147,6 +2202,125 @@ function pickMotPapa(){
 function nomFiston(){
   return prefs.prenom && prefs.prenom.trim() ? prefs.prenom.trim() : "champion";
 }
+
+/* ============================================================
+   PROFILES — CRUD + switch
+   Chaque profil a son ensemble complet : prefs, cards, scores, exams, reviews.
+   Quand on switch, on snapshote le profil courant en localStorage,
+   on charge le snapshot du nouveau (ou seed propre si jamais utilisé).
+   ============================================================ */
+async function snapshotProfile(id){
+  const snap = {
+    prefs: prefs,
+    cards: await dbAll("cards"),
+    scores: await dbAll("scores"),
+    exams: await dbAll("exams"),
+    reviews: await dbAll("reviews"),
+    savedAt: Date.now()
+  };
+  try{ localStorage.setItem(profileSnapshotKey(id), JSON.stringify(snap)); }
+  catch(e){
+    // Quota dépassé — drop reviews qui prennent le plus de place
+    snap.reviews = (snap.reviews || []).slice(-200);
+    try{ localStorage.setItem(profileSnapshotKey(id), JSON.stringify(snap)); }
+    catch(e2){ console.warn("snapshot quota:", e2); throw new Error("quota_exceeded"); }
+  }
+}
+
+async function loadProfileSnapshot(id){
+  const raw = localStorage.getItem(profileSnapshotKey(id));
+  if(!raw) return false;
+  try{
+    const s = JSON.parse(raw);
+    if(Array.isArray(s.cards)) for(const c of s.cards) await dbPut("cards", c);
+    if(Array.isArray(s.scores)) for(const x of s.scores) try{ await dbAdd("scores", x); }catch{}
+    if(Array.isArray(s.exams)) for(const x of s.exams) try{ await dbAdd("exams", x); }catch{}
+    if(Array.isArray(s.reviews)) for(const x of s.reviews) try{ await dbAdd("reviews", x); }catch{}
+    return true;
+  }catch(e){ console.warn("loadProfileSnapshot:", e); return false; }
+}
+
+async function switchProfile(newId){
+  const currentId = getActiveId();
+  if(currentId === newId) return;
+  const newProf = getProfiles().find(p => p.id === newId);
+  if(!newProf){ toast("Profil introuvable."); return; }
+  toast("⏳ Changement de profil…");
+  // 1) Snapshot current
+  try{ await snapshotProfile(currentId); }
+  catch(e){ if(!confirm("Quota localStorage dépassé pour le snapshot.\nContinuer la perte = oublier la progression du profil courant. OK pour continuer ?")) return; }
+  // 2) Active = nouveau
+  setActiveId(newId);
+  prefs = loadPrefs();
+  applyTheme();
+  // 3) Vide la base
+  await dbClear("cards"); await dbClear("scores"); await dbClear("exams"); await dbClear("reviews");
+  // 4) Restore snapshot OU re-seed
+  const restored = await loadProfileSnapshot(newId);
+  if(!restored) await ensureCardsSeeded();
+  // 5) UI
+  updateCountdown();
+  renderProfileWidget();
+  navigate();
+  setTimeout(() => toast("👤 Profil : " + (newProf.emoji||"👤") + " " + newProf.name), 250);
+  // 6) Si sync activée pour ce profil, pull en arrière-plan
+  if(prefs.syncEnabled && navigator.onLine){
+    setTimeout(async () => {
+      const j = await syncPull({ silent:true });
+      if(j && j.data && j.ts > (prefs.syncLastPullAt||0)){
+        await applySyncData(j.data);
+        prefs.syncLastPullAt = Date.now(); savePrefs();
+        navigate();
+        toast("☁️ Données du cloud chargées.");
+      }
+    }, 600);
+  }
+}
+
+function addProfileLocal(name, emoji){
+  const id = newProfileId();
+  const profiles = getProfiles();
+  profiles.push({ id, name: (name||"Sans nom").slice(0,30), emoji: emoji || "👤", createdAt: Date.now() });
+  setProfiles(profiles);
+  return id;
+}
+
+function renameProfileLocal(id, name, emoji){
+  const profiles = getProfiles();
+  const p = profiles.find(x => x.id === id);
+  if(!p) return false;
+  if(name) p.name = name.slice(0, 30);
+  if(emoji) p.emoji = emoji;
+  setProfiles(profiles);
+  return true;
+}
+
+async function deleteProfileLocal(id){
+  if(getProfiles().length <= 1){ toast("Au moins 1 profil requis."); return false; }
+  if(id === getActiveId()){
+    // bascule vers un autre avant de supprimer
+    const other = getProfiles().find(p => p.id !== id);
+    await switchProfile(other.id);
+  }
+  setProfiles(getProfiles().filter(p => p.id !== id));
+  localStorage.removeItem(profilePrefsKey(id));
+  localStorage.removeItem(profileSnapshotKey(id));
+  return true;
+}
+
+function renderProfileWidget(){
+  const wrap = document.getElementById("profileWidget");
+  if(!wrap) return;
+  const a = activeProfile();
+  if(!a){ wrap.innerHTML = ""; return; }
+  wrap.innerHTML = `<div class="profPill" data-go="settings">
+    <span style="font-size:18px">${a.emoji||"👤"}</span>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;line-height:1.1">${escapeHTML(a.name)}</div>
+      <div class="muted" style="font-size:10.5px">${getProfiles().length} profil${getProfiles().length>1?"s":""} · changer ›</div>
+    </div>
+  </div>`;
+}
 function parseHash(){
   const h = location.hash.replace(/^#\//,"") || "home";
   const [name, ...rest] = h.split("&");
@@ -2893,7 +3067,31 @@ function renderAnnales(){
 function renderSettings(){
   const body = document.getElementById("settingsBody");
   const customMsgs = (prefs.papaMessages || []).join("\n");
+  const activeId = getActiveId();
+  const profiles = getProfiles();
+  const profilesHTML = profiles.map(p => `
+    <div class="profRow ${p.id===activeId?'active':''}">
+      <div class="em">${p.emoji||"👤"}</div>
+      <div class="nm"><b>${escapeHTML(p.name)}</b><small>${p.id===activeId?"actif":"inactif"} · ID ${p.id.slice(0,8)}</small></div>
+      <div class="actions">
+        ${p.id===activeId
+          ? `<button class="btn ghost" data-renameprof="${p.id}">✏️</button>`
+          : `<button class="btn primary" data-switchprof="${p.id}">↻ Activer</button>
+             <button class="btn ghost" data-renameprof="${p.id}">✏️</button>
+             <button class="btn danger" data-delprof="${p.id}">🗑️</button>`}
+      </div>
+    </div>`).join("");
   body.innerHTML = `
+    <div class="card" style="background:linear-gradient(180deg, rgba(246,200,144,.08), rgba(155,140,255,.06));border-color:rgba(246,200,144,.28)">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 10px">👥 Comptes / profils</h4>
+      <p class="muted" style="font-size:13px;margin:0 0 10px">Plusieurs personnes peuvent utiliser cet appareil. Chaque profil a sa propre progression, ses propres mots de papa, ses propres flashcards.</p>
+      ${profilesHTML}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input type="text" id="newProfName" class="btn" style="flex:1" placeholder="Prénom (ex : Marie)">
+        <input type="text" id="newProfEmoji" class="btn" style="width:70px;text-align:center" placeholder="👤" maxlength="2">
+        <button class="btn primary" id="addProfBtn">+ Ajouter</button>
+      </div>
+    </div>
     <div class="papaCard">
       <div class="lbl"><span class="heart">❤</span> Pour Guillaume</div>
       <div class="msg" style="font-size:14.5px">Personnalise les messages que ton fils verra à chaque ouverture. Sois honnête, pas mièvre — c'est ce qui touche.</div>
@@ -2964,6 +3162,36 @@ function renderSettings(){
     prefs.papaMessages = lines; prefs.papaIndex = 0; savePrefs();
     toast(lines.length ? `💛 ${lines.length} message${lines.length>1?"s":""} enregistré${lines.length>1?"s":""}.` : "💛 Messages réinitialisés (défauts).");
   };
+  // Profils
+  document.querySelectorAll("[data-switchprof]").forEach(b => b.onclick = async () => {
+    await switchProfile(b.dataset.switchprof);
+    renderSettings();
+  });
+  document.querySelectorAll("[data-renameprof]").forEach(b => b.onclick = () => {
+    const id = b.dataset.renameprof;
+    const p = getProfiles().find(x => x.id === id); if(!p) return;
+    const name = prompt("Nouveau prénom :", p.name); if(name === null) return;
+    const emoji = prompt("Nouvel emoji (1-2 caractères) :", p.emoji); if(emoji === null) return;
+    renameProfileLocal(id, name.trim(), (emoji||"👤").slice(0,2));
+    renderProfileWidget(); renderSettings();
+  });
+  document.querySelectorAll("[data-delprof]").forEach(b => b.onclick = async () => {
+    const id = b.dataset.delprof;
+    const p = getProfiles().find(x => x.id === id); if(!p) return;
+    if(!confirm(`Supprimer définitivement le profil "${p.name}" et toute sa progression locale ?\n\n(Si la sync cloud était activée, les données restent dans le cloud — elles peuvent être récupérées en réactivant le sync ailleurs.)`)) return;
+    await deleteProfileLocal(id);
+    renderProfileWidget(); renderSettings();
+  });
+  const addBtn = document.getElementById("addProfBtn");
+  if(addBtn) addBtn.onclick = async () => {
+    const name = document.getElementById("newProfName").value.trim();
+    const emoji = (document.getElementById("newProfEmoji").value || "👤").slice(0,2);
+    if(!name){ toast("Donne au moins un prénom."); return; }
+    const id = addProfileLocal(name, emoji);
+    await switchProfile(id);
+    renderProfileWidget(); renderSettings();
+  };
+
   // Sync cloud
   const syncOn = document.getElementById("syncOnBtn");
   if(syncOn) syncOn.onclick = async () => {
@@ -3515,6 +3743,7 @@ async function init(){
   await ensureCardsSeeded();
   updateCountdown();
   setInterval(updateCountdown, 60000);
+  renderProfileWidget();
   if(!location.hash) location.hash = "#/home";
   navigate();
   // Pull cloud au démarrage si activé

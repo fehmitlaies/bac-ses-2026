@@ -1,0 +1,11 @@
+{
+  "name": "bac-ses-2026",
+  "version": "2.1.0",
+  "private": true,
+  "description": "App de révision Bac SES 2026 — PWA + sync cloud Vercel/Upstash",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}

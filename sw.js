@@ -1,7 +1,7 @@
 /* Service Worker — Bac SES 2026
    Stratégie : cache-first sur l'app shell, network-first pour le reste.
    Bump CACHE_VERSION pour invalider le cache après une mise à jour. */
-const CACHE_VERSION = "ses-2026-v2.0.0";
+const CACHE_VERSION = "ses-2026-v2.1.0";
 const CORE_ASSETS = [
   "./",
   "./index.html",
@@ -26,6 +26,8 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
+  // Ne JAMAIS cacher l'API de sync — toujours network, jamais cache offline
+  if (url.pathname.startsWith("/api/")) return;
 
   e.respondWith(
     caches.match(e.request).then((cached) => {

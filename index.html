@@ -403,6 +403,7 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
     Bac SES 2026
     <small id="barSub">Spécialité Terminale · 3 niveaux</small>
   </div>
+  <span id="syncDot" title="État sync" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#9ba8c4;margin-right:2px"></span>
   <div class="countdown" id="countdown">—</div>
 </header>
 
@@ -610,7 +611,9 @@ const defaultPrefs = {
   papaMessages:[], // messages custom de Guillaume
   papaIndex:0,
   papaSeen:[],
-  proud:0 // compteur sessions complétées
+  proud:0, // compteur sessions complétées
+  syncId:"", syncPass:"", syncEnabled:false, // sync cloud
+  syncLastPushAt:0, syncLastPullAt:0
 };
 let prefs = loadPrefs();
 
@@ -2537,6 +2540,7 @@ async function answerCard(q){
   sm2Review(c, q);
   await dbPut("cards", c);
   await dbAdd("reviews", { cardId:c.id, q, t:Date.now(), day:todayKey() });
+  syncPushDebounced();
   cardIdx++; cardFlipped = false; showCard();
 }
 function bumpStreak(){
@@ -2916,9 +2920,26 @@ function renderSettings(){
         <button class="btn" data-fz="l">A+</button>
         <button class="btn" data-fz="xl">A++</button></div>
     </div>
+    <div class="card" style="background:linear-gradient(180deg, rgba(124,197,255,.08), rgba(155,140,255,.06));border-color:rgba(124,197,255,.25)">
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">☁️ Sync cloud (multi-appareil)</h4>
+      <p class="muted" style="font-size:13px;margin:4px 0 10px">Active la sync pour retrouver ta progression sur tel + ordi. Chiffres et messages de papa restent privés.</p>
+      <label class="muted" style="font-size:12px">Identifiant de sync (slug perso, ex : <code>lucas-2026</code>)</label>
+      <input type="text" id="setSyncId" class="btn" style="width:100%;margin-top:4px" placeholder="lucas-2026" value="${escapeHTML(prefs.syncId||"")}">
+      <label class="muted" style="font-size:12px;margin-top:10px;display:block">Passphrase (≥ 4 caractères, à mémoriser)</label>
+      <input type="password" id="setSyncPass" class="btn" style="width:100%;margin-top:4px" placeholder="papa42" value="${escapeHTML(prefs.syncPass||"")}">
+      <p class="muted" style="font-size:11.5px;margin:8px 0 0">Le passphrase protège tes données : seul un appareil avec le même ID + passphrase peut lire/écrire.</p>
+      <div class="row mt" style="gap:8px">
+        ${prefs.syncEnabled
+          ? `<button class="btn primary" id="syncPullBtn">⬇️ Pull cloud → ici</button>
+             <button class="btn" id="syncPushBtn">⬆️ Push ici → cloud</button>
+             <button class="btn danger" id="syncOffBtn">Désactiver</button>`
+          : `<button class="btn primary" id="syncOnBtn">☁️ Activer la sync cloud</button>`}
+      </div>
+      <div id="syncBanner" class="muted" style="margin-top:10px;font-size:12.5px"></div>
+    </div>
     <div class="card">
-      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Sauvegarde</h4>
-      <p class="muted" style="font-size:13px">Tes données sont stockées localement (IndexedDB + localStorage). Exporte régulièrement — surtout sur iPhone (iOS efface après 7 j d'inactivité).</p>
+      <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Sauvegarde locale (manuelle)</h4>
+      <p class="muted" style="font-size:13px">Backup additionnel en JSON. Recommandé même avec sync cloud activée.</p>
       <div class="row"><button class="btn primary" id="exportBtn">📥 Exporter JSON</button>
         <label class="btn">📤 Importer<input type="file" id="importFile" accept="application/json" style="display:none"></label>
         <button class="btn danger" id="resetBtn">🗑️ Tout réinitialiser</button></div>
@@ -2943,6 +2964,38 @@ function renderSettings(){
     prefs.papaMessages = lines; prefs.papaIndex = 0; savePrefs();
     toast(lines.length ? `💛 ${lines.length} message${lines.length>1?"s":""} enregistré${lines.length>1?"s":""}.` : "💛 Messages réinitialisés (défauts).");
   };
+  // Sync cloud
+  const syncOn = document.getElementById("syncOnBtn");
+  if(syncOn) syncOn.onclick = async () => {
+    const id = document.getElementById("setSyncId").value.trim();
+    const pass = document.getElementById("setSyncPass").value.trim();
+    if(!id || pass.length < 4){ toast("ID + passphrase (≥4 car) requis."); return; }
+    syncOn.disabled = true; syncOn.textContent = "Activation…";
+    await syncEnable(id, pass);
+    renderSettings();
+  };
+  const syncOff = document.getElementById("syncOffBtn");
+  if(syncOff) syncOff.onclick = () => { syncDisable(); renderSettings(); };
+  const syncPullBtn = document.getElementById("syncPullBtn");
+  if(syncPullBtn) syncPullBtn.onclick = async () => {
+    const j = await syncPull();
+    if(j && j.data){
+      if(!confirm("Remplacer ta progression locale par celle du cloud (datée " + new Date(j.ts).toLocaleString("fr-FR") + ") ?")) return;
+      await applySyncData(j.data);
+      prefs.syncLastPullAt = Date.now(); savePrefs();
+      toast("☁️ Cloud importé."); renderSettings();
+    } else if(j) toast("Cloud vide.");
+  };
+  const syncPushBtn = document.getElementById("syncPushBtn");
+  if(syncPushBtn) syncPushBtn.onclick = async () => {
+    if(!confirm("Écraser le cloud avec tes données locales ?")) return;
+    const ok = await syncPush();
+    if(ok) toast("☁️ Cloud mis à jour.");
+  };
+  // Init banner status
+  if(prefs.syncEnabled) setSyncStatus(syncState.status === "idle" ? "ok" : syncState.status, syncState.msg);
+  else setSyncStatus("unset");
+
   document.querySelectorAll("[data-th]").forEach(b => b.onclick = () => { prefs.theme = b.dataset.th; savePrefs(); applyTheme(); });
   document.querySelectorAll("[data-fz]").forEach(b => b.onclick = () => { prefs.fz = b.dataset.fz; savePrefs(); applyTheme(); });
   document.getElementById("exportBtn").onclick = exportData;
@@ -3276,6 +3329,163 @@ function renderPapa(){
 }
 
 /* ============================================================
+   SYNC CLOUD — Vercel /api/sync (Upstash Redis)
+   Mode "last-write-wins" sur l'objet entier. Conflit signalé à l'utilisateur.
+   ============================================================ */
+const SYNC_API = "/api/sync"; // chemin relatif → marche sur Vercel
+let syncState = { status:"idle", msg:"" }; // idle | syncing | ok | error | offline | unset
+let syncDebounce = null;
+
+async function gatherSyncData(){
+  return {
+    prefs: Object.assign({}, prefs, { syncPass:undefined }), // ne pas envoyer le pass au serveur via le payload
+    cards: await dbAll("cards"),
+    scores: await dbAll("scores"),
+    exams: await dbAll("exams"),
+    reviews: await dbAll("reviews")
+  };
+}
+
+async function applySyncData(data){
+  if(!data) return;
+  // 1) prefs — merge (on garde syncId/syncPass locaux)
+  if(data.prefs){
+    const keepers = { syncId:prefs.syncId, syncPass:prefs.syncPass, syncEnabled:prefs.syncEnabled };
+    prefs = Object.assign({}, defaultPrefs, data.prefs, keepers);
+    savePrefs();
+    applyTheme();
+  }
+  // 2) cards : remplace la store (last-write-wins)
+  if(Array.isArray(data.cards)){
+    await dbClear("cards");
+    for(const c of data.cards) await dbPut("cards", c);
+  }
+  if(Array.isArray(data.scores)){
+    await dbClear("scores");
+    for(const s of data.scores) try{ await dbAdd("scores", s); }catch{}
+  }
+  if(Array.isArray(data.exams)){
+    await dbClear("exams");
+    for(const e of data.exams) try{ await dbAdd("exams", e); }catch{}
+  }
+  if(Array.isArray(data.reviews)){
+    await dbClear("reviews");
+    for(const r of data.reviews) try{ await dbAdd("reviews", r); }catch{}
+  }
+}
+
+function setSyncStatus(status, msg=""){
+  syncState = { status, msg };
+  const dot = document.getElementById("syncDot");
+  if(dot){
+    const map = { idle:"#9ba8c4", syncing:"#7cc5ff", ok:"#34d399", error:"#f87171", offline:"#9ba8c4", unset:"#9ba8c4" };
+    dot.style.background = map[status] || "#9ba8c4";
+    dot.title = msg || status;
+  }
+  const banner = document.getElementById("syncBanner");
+  if(banner){
+    if(status === "syncing") banner.textContent = "☁️ Sync en cours…";
+    else if(status === "ok") banner.textContent = "☁️ Synchronisé · " + new Date(prefs.syncLastPullAt||prefs.syncLastPushAt||Date.now()).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+    else if(status === "error") banner.textContent = "⚠️ Sync échouée — " + msg;
+    else if(status === "offline") banner.textContent = "📴 Hors ligne — sync reprend au retour";
+    else if(status === "unset") banner.textContent = "💾 Sync cloud désactivée — Paramètres pour activer";
+    else banner.textContent = "";
+  }
+}
+
+async function syncPull({ silent=false } = {}){
+  if(!prefs.syncEnabled || !prefs.syncId || !prefs.syncPass) return null;
+  if(!navigator.onLine){ setSyncStatus("offline"); return null; }
+  setSyncStatus("syncing", "Récupération…");
+  try{
+    const url = SYNC_API + "?id=" + encodeURIComponent(prefs.syncId) + "&pass=" + encodeURIComponent(prefs.syncPass);
+    const r = await fetch(url);
+    if(r.status === 401){ setSyncStatus("error", "Mauvaise passphrase"); if(!silent) toast("❌ Mauvaise passphrase"); return null; }
+    if(r.status === 503){ setSyncStatus("error", "Serveur sync non configuré"); return null; }
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    if(!j.data){ setSyncStatus("ok", "Vide côté cloud"); prefs.syncLastPullAt = Date.now(); savePrefs(); return null; }
+    if(j.ts <= prefs.syncLastPullAt && j.ts <= prefs.syncLastPushAt){
+      setSyncStatus("ok"); prefs.syncLastPullAt = Date.now(); savePrefs(); return j;
+    }
+    return j;
+  }catch(e){
+    console.warn("syncPull:", e);
+    setSyncStatus("error", e.message || "réseau");
+    return null;
+  }
+}
+
+async function syncPush(){
+  if(!prefs.syncEnabled || !prefs.syncId || !prefs.syncPass) return false;
+  if(!navigator.onLine){ setSyncStatus("offline"); return false; }
+  setSyncStatus("syncing", "Envoi…");
+  try{
+    const data = await gatherSyncData();
+    const r = await fetch(SYNC_API, {
+      method: "POST",
+      headers: { "Content-Type":"application/json" },
+      body: JSON.stringify({ id:prefs.syncId, pass:prefs.syncPass, data })
+    });
+    if(r.status === 401){ setSyncStatus("error", "Mauvaise passphrase"); return false; }
+    if(r.status === 503){ setSyncStatus("error", "Serveur sync non configuré"); return false; }
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    prefs.syncLastPushAt = j.ts || Date.now();
+    savePrefs();
+    setSyncStatus("ok");
+    return true;
+  }catch(e){
+    console.warn("syncPush:", e);
+    setSyncStatus("error", e.message || "réseau");
+    return false;
+  }
+}
+
+function syncPushDebounced(){
+  if(!prefs.syncEnabled) return;
+  clearTimeout(syncDebounce);
+  syncDebounce = setTimeout(() => { syncPush(); }, 4000);
+}
+
+async function syncEnable(id, pass){
+  prefs.syncId = id; prefs.syncPass = pass; prefs.syncEnabled = true; savePrefs();
+  // 1) tenter pull
+  const pulled = await syncPull();
+  if(pulled && pulled.data){
+    // proposer fusion : si on a déjà des données locales, demander
+    const local = await gatherSyncData();
+    const localHasData = (local.cards||[]).some(c => (c.history||[]).length > 0) || (prefs.proud||0) > 0;
+    if(localHasData){
+      const choice = confirm("Données trouvées dans le cloud (" + new Date(pulled.ts).toLocaleString("fr-FR") + ").\n\nOK = remplacer ma progression locale par celle du cloud.\nAnnuler = pousser ma progression locale vers le cloud (écrase).");
+      if(choice){
+        await applySyncData(pulled.data);
+        prefs.syncLastPullAt = Date.now(); savePrefs();
+        toast("☁️ Données du cloud chargées.");
+      } else {
+        await syncPush();
+        toast("☁️ Données locales poussées au cloud.");
+      }
+    } else {
+      await applySyncData(pulled.data);
+      prefs.syncLastPullAt = Date.now(); savePrefs();
+      toast("☁️ Cloud → local : " + (pulled.data?.cards?.length||0) + " cartes");
+    }
+  } else {
+    // rien côté cloud → push local
+    await syncPush();
+    toast("☁️ 1ère sync : tes données sont en sécurité.");
+  }
+  setSyncStatus("ok");
+}
+
+function syncDisable(){
+  prefs.syncEnabled = false; savePrefs();
+  setSyncStatus("unset");
+  toast("💾 Sync cloud désactivée. Tes données restent locales.");
+}
+
+/* ============================================================
    PWA — service worker + offline
    ============================================================ */
 if("serviceWorker" in navigator){
@@ -3284,7 +3494,15 @@ if("serviceWorker" in navigator){
   });
 }
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window._installEvt = e; });
-function syncOnline(){ document.body.classList.toggle("offline-mode", !navigator.onLine); }
+function syncOnline(){
+  document.body.classList.toggle("offline-mode", !navigator.onLine);
+  if(navigator.onLine && prefs.syncEnabled){
+    setSyncStatus("syncing", "Reprise sync…");
+    syncPush();
+  } else if(!navigator.onLine){
+    setSyncStatus("offline");
+  }
+}
 window.addEventListener("online", syncOnline); window.addEventListener("offline", syncOnline);
 syncOnline();
 
@@ -3299,6 +3517,19 @@ async function init(){
   setInterval(updateCountdown, 60000);
   if(!location.hash) location.hash = "#/home";
   navigate();
+  // Pull cloud au démarrage si activé
+  if(prefs.syncEnabled && navigator.onLine){
+    setTimeout(async () => {
+      const j = await syncPull({ silent:true });
+      if(j && j.data && j.ts > (prefs.syncLastPullAt || 0)){
+        // changement détecté côté cloud — applique automatiquement
+        await applySyncData(j.data);
+        prefs.syncLastPullAt = Date.now(); savePrefs();
+        if(parseHash().name === "home") navigate();
+        toast("☁️ Données du cloud chargées.");
+      }
+    }, 800);
+  }
 }
 init();
 </script>

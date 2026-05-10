@@ -1,7 +1,7 @@
 /* Service Worker — Bac SES 2026
    Stratégie : cache-first sur l'app shell, network-first pour le reste.
    Bump CACHE_VERSION pour invalider le cache après une mise à jour. */
-const CACHE_VERSION = "ses-2026-v2.2.0";
+const CACHE_VERSION = "ses-2026-v2.3.0";
 const CORE_ASSETS = [
   "./",
   "./index.html",

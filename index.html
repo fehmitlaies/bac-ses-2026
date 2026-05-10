@@ -18,11 +18,31 @@
   --r:16px;--shadow:0 10px 30px rgba(0,0,0,.35);--shadowWarm:0 14px 40px rgba(246,200,144,.10);
   --fz:15px;
 }
+/* === Thème AUBE (jour) : papier crème, ergonomique, chaleureux === */
 [data-theme="light"]{
-  --bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--line:#e2e8f0;
-  --text:#0f172a;--muted:#475569;--mutedDim:#94a3b8;
-  --accent:#1d4ed8;--accent2:#7c3aed;
+  --bg:#f7f1e6;--bg2:#fffaf0;--card:#fffaf0;--card2:#f4ecdc;--line:#e3d6bf;
+  --text:#2a1f12;--muted:#6b5d4f;--mutedDim:#a89a89;
+  --accent:#1d4ed8;--accent2:#7c3aed;--warm:#b06b2c;--rose:#b6536e;
+  --brand:#1e3a8a;
+  --basic:#c97a16;--solid:#159a5c;--excel:#7c3aed;
+  --ok:#159a5c;--warn:#c97a16;--err:#c1322f;
+  --shadow:0 8px 24px rgba(60,40,15,.08);
+  --shadowWarm:0 10px 30px rgba(176,107,44,.14);
 }
+[data-theme="light"] body{
+  background:radial-gradient(1200px 800px at 20% -10%,#fff5e1 0%,transparent 60%),
+             radial-gradient(900px 600px at 100% 0%,#fdf0e2 0%,transparent 55%),var(--bg)
+}
+[data-theme="light"] .papaCard{
+  background:radial-gradient(circle at 0% 0%, rgba(176,107,44,.14), transparent 60%),
+             radial-gradient(circle at 100% 100%, rgba(182,83,110,.13), transparent 55%),
+             linear-gradient(180deg, #fffaf0, #f7ecd9);
+  border:1px solid rgba(176,107,44,.30);
+  color:#2a1f12
+}
+[data-theme="light"] .papaCard .msg{color:#3d2d1a}
+[data-theme="light"] .bar{background:rgba(247,241,230,.85);border-bottom:1px solid #e3d6bf}
+[data-theme="light"] .navItem.active{color:var(--accent2)}
 [data-fz="s"]{--fz:13.5px}
 [data-fz="l"]{--fz:16.5px}
 [data-fz="xl"]{--fz:18px}
@@ -450,6 +470,10 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
     <h2>Souffle</h2>
     <button class="navItem" data-go="zen"><span class="ico">🌬️</span>Pause respiration</button>
     <button class="navItem" data-go="papa"><span class="ico">💛</span>Mot de papa</button>
+    <button class="navItem" data-go="journal"><span class="ico">📔</span>Journal du soir</button>
+    <h2>Jour J</h2>
+    <button class="navItem" data-go="jourj"><span class="ico">🌅</span>Plan Jour J</button>
+    <button class="navItem" data-go="boussole"><span class="ico">🧭</span>Boussole anti-stress</button>
     <h2>Outils</h2>
     <button class="navItem" data-go="planning"><span class="ico">🗓️</span>Planning</button>
     <button class="navItem" data-go="stats"><span class="ico">📈</span>Statistiques</button>
@@ -480,7 +504,9 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
 
     <div class="grid">
       <button class="btn primary lg" data-go="cards">🎴 Mes cartes du jour</button>
+      <button class="btn lg" data-go="journal">📔 Journal du soir (30 s)</button>
       <button class="btn lg" data-go="zen">🌬️ Pause respiration (3 min)</button>
+      <button class="btn lg" data-go="jourj">🌅 Plan Jour J</button>
       <button class="btn lg" data-go="programme">📚 Programme</button>
       <button class="btn lg" data-go="exam">⏱️ Examen blanc 4 h</button>
     </div>
@@ -575,6 +601,24 @@ section[data-route].active > *:nth-child(4){animation-delay:.15s}
     <div id="annalesBody"></div>
   </section>
 
+  <!-- JOURNAL du soir -->
+  <section data-route="journal">
+    <h2 style="margin:0 0 10px;font-size:18px">📔 Journal du soir</h2>
+    <div id="journalBody"></div>
+  </section>
+
+  <!-- JOUR J -->
+  <section data-route="jourj">
+    <h2 style="margin:0 0 10px;font-size:18px">🌅 Plan Jour J</h2>
+    <div id="jourjBody"></div>
+  </section>
+
+  <!-- BOUSSOLE anti-stress -->
+  <section data-route="boussole">
+    <h2 style="margin:0 0 10px;font-size:18px">🧭 Boussole anti-stress</h2>
+    <div id="boussoleBody"></div>
+  </section>
+
   <!-- ZEN respiration -->
   <section data-route="zen">
     <h2 style="margin:0 0 10px;font-size:18px">🌬️ Pause respiration</h2>
@@ -655,7 +699,7 @@ function migrateProfiles(){
 }
 migrateProfiles();
 const defaultPrefs = {
-  theme:"dark", fz:"m",
+  theme:"auto", fz:"m",
   examDate:"2026-06-16",
   dailyMinutes:45,
   star:{}, done:{},
@@ -668,7 +712,11 @@ const defaultPrefs = {
   papaSeen:[],
   proud:0, // compteur sessions complétées
   syncId:"", syncPass:"", syncEnabled:false, // sync cloud
-  syncLastPushAt:0, syncLastPullAt:0
+  syncLastPushAt:0, syncLastPullAt:0,
+  // Journal du soir : tableau d'entrées { date:"YYYY-MM-DD", fierte, defi }
+  journal: [],
+  // Implementation intentions (Gollwitzer) : "Si X alors Y"
+  intent_blocage: "", intent_stress: "", intent_doute: ""
 };
 let prefs = loadPrefs();
 
@@ -681,11 +729,23 @@ function loadPrefs(){
 }
 function savePrefs(){ localStorage.setItem(profilePrefsKey(getActiveId()), JSON.stringify(prefs)); }
 
+function resolveTheme(t){
+  if(t === "auto" || !t){
+    const m = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    return m && m.matches ? "dark" : "light";
+  }
+  return t;
+}
 function applyTheme(){
-  document.documentElement.dataset.theme = prefs.theme;
+  document.documentElement.dataset.theme = resolveTheme(prefs.theme);
   document.documentElement.dataset.fz = prefs.fz;
 }
 applyTheme();
+if(window.matchMedia){
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", () => {
+    if(prefs.theme === "auto") applyTheme();
+  });
+}
 
 /* ============================================================
    IndexedDB minimal wrapper
@@ -2164,7 +2224,8 @@ const routes = {
   exam:renderExam, planning:renderPlanning, stats:renderStats,
   annales:renderAnnales, settings:renderSettings,
   calc:renderCalc, oral:renderOral, verbes:renderVerbes,
-  zen:renderZen, papa:renderPapa
+  zen:renderZen, papa:renderPapa,
+  journal:renderJournal, jourj:renderJourJ, boussole:renderBoussole
 };
 
 /* ============================================================
@@ -3109,9 +3170,11 @@ function renderSettings(){
     </div>
     <div class="card">
       <h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:0 0 6px">Apparence</h4>
-      <div class="row"><b>Thème :</b>
-        <button class="btn" data-th="dark">🌙 Sombre</button>
-        <button class="btn" data-th="light">☀️ Clair</button></div>
+      <div class="row" style="gap:6px;flex-wrap:wrap"><b>Thème :</b>
+        <button class="btn ${prefs.theme==='auto'?'primary':''}" data-th="auto">🌗 Auto</button>
+        <button class="btn ${prefs.theme==='light'?'primary':''}" data-th="light">🌅 Aube</button>
+        <button class="btn ${prefs.theme==='dark'?'primary':''}" data-th="dark">🌙 Crépuscule</button></div>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Auto suit la pref de ton système (clair le jour, sombre le soir).</p>
       <div class="row mt"><b>Police :</b>
         <button class="btn" data-fz="s">A−</button>
         <button class="btn" data-fz="m">A</button>
@@ -3711,6 +3774,240 @@ function syncDisable(){
   prefs.syncEnabled = false; savePrefs();
   setSyncStatus("unset");
   toast("💾 Sync cloud désactivée. Tes données restent locales.");
+}
+
+/* ============================================================
+   JOUR J — checklists Veille / Matin / Pendant / Après
+   Sources : Walker (sommeil), Putwain (anxiété test), Gomez (sommeil & exam),
+   Klein (pre-mortem), Weil (4-7-8 breath).
+   ============================================================ */
+const JOUR_J = {
+  veille:{
+    titre:"La veille — J-1",
+    intro:"L'objectif ce soir : dormir. Pas réviser. Les acquis sont déjà là.",
+    items:[
+      "Pas de révisions intenses après 19 h. Au mieux, relis tes fiches express 30 min.",
+      "Prépare ton sac maintenant : pièce d'identité, convocation, 3 stylos noirs (testés), une montre (pas connectée), bouteille d'eau, mouchoirs, paquet de mouchoirs en plus.",
+      "Repas léger : pâtes ou riz + légumes + un peu de protéines. Pas de plat lourd, pas de fast-food.",
+      "Pas d'alcool, pas de boisson énergisante, pas de café après 14 h.",
+      "Vise le coucher à 22 h 30 max. 8 h de sommeil = +1,7 point en moyenne (Walker).",
+      "Pas d'écran 1 h avant de dormir. Lis un livre papier (un truc cool, pas du SES).",
+      "Si tu n'arrives pas à dormir : ne stresse pas. Reste allongé yeux fermés, respire lentement. Le corps au repos compte aussi.",
+      "Pose ton réveil et un réveil de secours. Vérifie 2 fois."
+    ],
+    mantra:"« J'ai bossé. Demain je vais juste montrer ce que je sais. »"
+  },
+  matin:{
+    titre:"Le matin du jour J",
+    intro:"2 h 30 avant l'épreuve. Tout est déjà gagné — il reste juste à le déployer.",
+    items:[
+      "Lève-toi 2 h 30 avant l'épreuve. Pas plus tôt (anxiété), pas moins (rush).",
+      "Douche tiède ou fraîche en fin (active la circulation, clarifie la tête).",
+      "Petit-déjeuner : protéines + glucides complexes + 1 fruit. Ex. : œuf + pain complet + banane. Évite le pur sucre (pic puis chute).",
+      "Bois 2 grands verres d'eau. La déshydratation de 2% baisse les perfs cognitives de 10%.",
+      "30 min de marche dehors si possible. Lumière du jour → cortisol éveil normal, mélatonine OK.",
+      "3 minutes de respiration cohérence cardiaque (5 s inspire, 5 s expire). Dans l'app, page Pause respiration.",
+      "Arrive 30 min en avance. Pas plus, pas moins.",
+      "Dans la file d'attente : casque audio, musique douce. Ne discute pas révisions avec les autres — leur stress devient le tien."
+    ],
+    mantra:"« Mon corps est tendu parce qu'il se prépare. C'est normal. C'est même utile. »"
+  },
+  pendant:{
+    titre:"Pendant l'épreuve",
+    intro:"4 heures. Une question à la fois. La meilleure stratégie : la calme stratégie.",
+    items:[
+      "Premières 5 minutes : lis l'intégralité du sujet. Ne commence rien à écrire.",
+      "Choix dissertation OU EC : ne change pas d'avis après 15 minutes.",
+      "Si EC : commence par EC2 (court, factuel, met en confiance), puis EC1, puis EC3.",
+      "Si dissertation : 30 min analyse + plan / 2 h 30 rédaction / 30 min relecture.",
+      "Toutes les 45 min : pose le stylo 30 secondes, ferme les yeux, 3 inspirations longues.",
+      "Si tu bloques sur une question : passe à la suivante. Reviens dans 10 minutes. Le cerveau cherche en arrière-plan.",
+      "Si tu doutes d'une réponse : écris ce que tu sais quand même. Une demi-réponse > zéro.",
+      "30 dernières minutes : relecture orthographe + transitions + numérotation des pages. JAMAIS de réécriture massive en fin de course."
+    ],
+    mantra:"« Une question à la fois. Je suis ici. C'est suffisant. »"
+  },
+  apres:{
+    titre:"Après l'épreuve",
+    intro:"Le piège, c'est la comparaison. Coupe-la net.",
+    items:[
+      "Sors de la salle rapidement. Ne reste pas à comparer les réponses.",
+      "N'ouvre PAS les corrigés en ligne avant la fin de toutes les épreuves de spé.",
+      "Récompense-toi avec une chose simple : un bon repas, un appel à un proche, une heure de jeu vidéo.",
+      "Si tu sens que ça s'est mal passé : écris ce que tu te dis maintenant. Demain tu le reliras et tu verras que c'était exagéré.",
+      "Tu as encore d'autres épreuves. Ce qui est fait est fait. Énergie sur la suite.",
+      "Si vraiment ça s'est mal passé : il y a le rattrapage, le redoublement, les vrais examens de la vie qui sont ailleurs. Le bac compte mais ne définit pas qui tu es."
+    ],
+    mantra:"« C'est fait. Je passe à la suite. »"
+  }
+};
+
+let jourjTab = "veille";
+function renderJourJ(){
+  const body = document.getElementById("jourjBody");
+  const target = new Date(prefs.examDate + "T08:00:00").getTime();
+  const days = Math.max(0, Math.ceil((target - Date.now())/86400000));
+  // tab par défaut selon J-bac
+  if(days === 0) jourjTab = "pendant";
+  else if(days === 1) jourjTab = "matin";
+  const tabs = [["veille","La veille"],["matin","Le matin"],["pendant","Pendant"],["apres","Après"]];
+  const cur = JOUR_J[jourjTab];
+  body.innerHTML = `
+    <div class="card" style="background:linear-gradient(180deg, rgba(246,200,144,.10), rgba(155,140,255,.06));border-color:rgba(246,200,144,.30)">
+      <p style="margin:0;font-size:13.5px">📋 <b>Checklist scientifiquement étayée.</b> À lire complètement dans la semaine avant le bac, puis le matin du jour J. Coche au fur et à mesure — chaque case réduit l'incertitude.</p>
+    </div>
+    <div class="tabs" style="margin-bottom:14px">
+      ${tabs.map(([k,l]) => `<button data-jjt="${k}" class="${k===jourjTab?'active':''}">${l}</button>`).join("")}
+    </div>
+    <div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> ${escapeHTML(cur.titre)}</div>
+      <div class="msg" style="font-size:14.5px;font-style:normal">${escapeHTML(cur.intro)}</div>
+    </div>
+    <div class="card">
+      <ul class="checklist" id="jjList" style="padding:0;margin:0;list-style:none">
+        ${cur.items.map((it,i) => {
+          const key = "ses2026.jj." + jourjTab + "." + i;
+          const checked = localStorage.getItem(key) === "1";
+          return `<li><label style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;cursor:pointer;font-size:14px"><input type="checkbox" data-jjk="${key}" ${checked?'checked':''}><span>${escapeHTML(it)}</span></label></li>`;
+        }).join("")}
+      </ul>
+    </div>
+    <div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> Le mantra de ce moment</div>
+      <div class="msg">${escapeHTML(cur.mantra)}</div>
+      <div class="sig">— Papa</div>
+    </div>`;
+  document.querySelectorAll("[data-jjt]").forEach(b => b.onclick = () => { jourjTab = b.dataset.jjt; renderJourJ(); });
+  document.querySelectorAll("#jjList input").forEach(cb => cb.onchange = () => {
+    localStorage.setItem(cb.dataset.jjk, cb.checked ? "1" : "0");
+  });
+}
+
+/* ============================================================
+   BOUSSOLE — 5 protocoles d'urgence anti-stress
+   Inspirés : 4-7-8 du Dr A. Weil ; protocoles type STOP de Putwain.
+   ============================================================ */
+const BOUSSOLE = [
+  {
+    ico:"🌀",
+    titre:"Blocage en plein examen",
+    quand:"Tu lis une question, ton cerveau est blanc. Tu paniques.",
+    etapes:[
+      "Pose le stylo. Lève les yeux. 3 inspirations profondes (5 s in, 5 s out).",
+      "Passe à la question suivante. Tu reviendras.",
+      "Quand tu reviens à la question : relis-la 3 fois, mot par mot. Souvent c'est juste qu'un mot t'a bloqué.",
+      "Si toujours bloqué : écris ce que tu sais. Définis les mots-clés du sujet. Donne 2 exemples. Un truc à moitié juste > rien.",
+      "Mantra : « Cette question fait 5 % de la note. Le reste m'attend. »"
+    ]
+  },
+  {
+    ico:"💨",
+    titre:"Crise d'angoisse avant l'épreuve",
+    quand:"Cœur à 130, mains moites, envie de pleurer, envie de fuir.",
+    etapes:[
+      "Trouve un endroit calme (toilettes, couloir, dehors).",
+      "Méthode 4-7-8 (Dr Weil) : inspire 4 s, retiens 7 s, expire lentement 8 s. <b>4 cycles minimum.</b>",
+      "Pose tes mains à plat sur quelque chose de frais (mur, robinet). Le froid coupe l'amygdale.",
+      "Mantra : « Cette sensation va passer en 2 minutes. Mon corps me protège mal, c'est tout. »",
+      "Si possible, appelle quelqu'un que tu aimes 60 secondes. Pas pour parler du bac — juste pour entendre sa voix."
+    ]
+  },
+  {
+    ico:"🌙",
+    titre:"Insomnie / nuit blanche",
+    quand:"Il est 2 h, tu ne dors pas, tu paniques de ne pas dormir.",
+    etapes:[
+      "Arrête de regarder l'heure. Tourne le réveil.",
+      "Allonge-toi yeux ouverts, respire lentement. Le corps au repos récupère même sans sommeil profond.",
+      "Surtout pas de téléphone. La lumière bleue te tient éveillé encore plus.",
+      "Si tu es vraiment réveillé depuis 1 h : lève-toi, lis un truc ennuyeux 15 min, retourne au lit.",
+      "Mantra : « Plein de gens ont eu leur bac sur 4 h de sommeil. Pas idéal mais possible. »"
+    ]
+  },
+  {
+    ico:"⏰",
+    titre:"Retard ou coup dur le matin J",
+    quand:"Métro en panne, retard de réveil, oubli de pièce d'identité.",
+    etapes:[
+      "Préviens quelqu'un (parent, copain qui passe l'examen, vie scolaire).",
+      "Ne cours pas. Marche vite. Le rythme cardiaque doit rester bas.",
+      "À l'arrivée : 1 minute de respiration AVANT d'ouvrir la copie. Toujours.",
+      "Pour la pièce d'identité oubliée : un parent peut l'apporter ; tu peux passer avec un justificatif et l'apporter plus tard.",
+      "Mantra : « Le temps perdu est négligeable face à un esprit calme. »"
+    ]
+  },
+  {
+    ico:"👀",
+    titre:"Comparaison toxique",
+    quand:"Tu regardes ton voisin écrire vite. Tu t'angoisses.",
+    etapes:[
+      "Recale tes yeux sur ta copie. Couvre la vue périphérique avec ton bras gauche si besoin.",
+      "Rappelle-toi : ce que tu vois, c'est sa vitesse, pas sa qualité. Plein écrivent vite et faux.",
+      "Mantra : « Son épreuve n'est pas mon épreuve. »",
+      "Pour la sortie de salle : ne fais PAS le tour des autres pour comparer. Pars vite.",
+      "Pour les réseaux sociaux après le bac : déconnecte-toi 48 h."
+    ]
+  }
+];
+
+function renderBoussole(){
+  const body = document.getElementById("boussoleBody");
+  body.innerHTML = `
+    <div class="card" style="background:linear-gradient(180deg, rgba(124,197,255,.08), rgba(155,140,255,.06));border-color:rgba(124,197,255,.25)">
+      <p style="margin:0;font-size:13.5px">🧭 <b>À garder dans un coin de la tête.</b> Tu peux ouvrir cette page <i>pendant</i> les épreuves si tu sors aux toilettes 90 secondes. Imprime-la (Ctrl+P) si tu veux l'avoir en papier dans la trousse.</p>
+    </div>` +
+    BOUSSOLE.map(b => `
+    <div class="card">
+      <h3 style="margin:0 0 4px;font-size:16px">${b.ico} ${escapeHTML(b.titre)}</h3>
+      <p class="muted" style="margin:0 0 10px;font-size:12.5px;font-style:italic">${escapeHTML(b.quand)}</p>
+      <ol style="padding-left:20px;margin:6px 0">
+        ${b.etapes.map(e => `<li style="margin:5px 0">${e}</li>`).join("")}
+      </ol>
+    </div>`).join("");
+}
+
+/* ============================================================
+   JOURNAL DU SOIR — 30 s/jour, 1 fierté + 1 défi
+   Source : Emmons & McCullough (2003) — gratitude journaling
+   3 semaines ↑ bien-être, ↓ insomnie, ↑ optimisme.
+   ============================================================ */
+function renderJournal(){
+  const body = document.getElementById("journalBody");
+  const today = todayKey();
+  const entries = (prefs.journal || []);
+  const todayEntry = entries.find(e => e.date === today);
+  body.innerHTML = `
+    <div class="papaCard">
+      <div class="lbl"><span class="heart">❤</span> Ce soir, 30 secondes</div>
+      <div class="msg" style="font-size:14.5px">2 phrases. Pas plus. Au jour J, tu reliras tout ce que tu as construit. Tu seras surpris.</div>
+    </div>
+    <div class="card">
+      <label class="muted" style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;display:block;margin-bottom:6px">Aujourd'hui je suis fier de…</label>
+      <textarea id="jourFierte" class="copyArea" style="min-height:80px" placeholder="Ex : avoir révisé même fatigué.">${escapeHTML(todayEntry?.fierte || "")}</textarea>
+      <label class="muted" style="font-size:12px;letter-spacing:1.2px;text-transform:uppercase;display:block;margin:14px 0 6px">Aujourd'hui j'ai trouvé dur…</label>
+      <textarea id="jourDefi" class="copyArea" style="min-height:80px" placeholder="Ex : me concentrer sur S3. J'y reviens demain.">${escapeHTML(todayEntry?.defi || "")}</textarea>
+      <div class="row mt"><button class="btn primary" id="jourSave">💛 Enregistrer ce soir</button></div>
+    </div>
+    ${entries.length ? `<h4 class="muted" style="font-size:11px;letter-spacing:1.4px;text-transform:uppercase;margin:18px 0 8px">Historique (${entries.length} jour${entries.length>1?"s":""})</h4>` : ""}
+    ${entries.slice().reverse().slice(0, 50).map(e => `
+      <div class="card" style="padding:12px">
+        <div class="muted" style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase">${escapeHTML(e.date)}</div>
+        ${e.fierte ? `<p style="margin:6px 0 0;font-size:14px">💛 ${escapeHTML(e.fierte)}</p>` : ""}
+        ${e.defi ? `<p style="margin:4px 0 0;font-size:13.5px;color:var(--muted)">🔁 ${escapeHTML(e.defi)}</p>` : ""}
+      </div>`).join("")}`;
+  document.getElementById("jourSave").onclick = () => {
+    const fierte = document.getElementById("jourFierte").value.trim();
+    const defi = document.getElementById("jourDefi").value.trim();
+    if(!fierte && !defi){ toast("Écris au moins une chose."); return; }
+    prefs.journal = (prefs.journal || []).filter(e => e.date !== today);
+    prefs.journal.push({ date: today, fierte, defi, t: Date.now() });
+    prefs.journal.sort((a,b) => a.date.localeCompare(b.date));
+    if(prefs.journal.length > 200) prefs.journal = prefs.journal.slice(-200);
+    savePrefs();
+    syncPushDebounced();
+    toast(["💛 Bien noté.", "Tu construis ta mémoire.", "Une journée de plus."][Math.floor(Math.random()*3)]);
+    renderJournal();
+  };
 }
 
 /* ============================================================
